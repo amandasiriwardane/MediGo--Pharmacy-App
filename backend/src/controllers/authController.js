@@ -1,3 +1,4 @@
+// src/controllers/authController.js
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -7,10 +8,13 @@ exports.registerUser = async (req, res) => {
   const { name, email, password, role, phone } = req.body;
 
   try {
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ msg: "User already exists" });
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = new User({ name, email, password: hashedPassword, role, phone });
     await user.save();
 
@@ -25,19 +29,14 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password)
       return res.status(400).json({ error: "Email and password are required" });
-    }
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ error: "Invalid email or password" });
-    }
+    if (!user) return res.status(400).json({ error: "Invalid email or password" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ error: "Invalid email or password" });
-    }
+    if (!isMatch) return res.status(400).json({ error: "Invalid email or password" });
 
     // Generate JWT token
     const token = jwt.sign(

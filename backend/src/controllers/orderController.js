@@ -44,6 +44,20 @@ exports.updateOrderStatus = async (req, res) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
+    const validTransitions = {
+      pending: ["confirmed"],       // pending → confirmed
+      confirmed: ["on-the-way"],    // confirmed → on-the-way
+      "on-the-way": ["delivered"],  // on-the-way → delivered
+      delivered: []                 // final state
+    };
+
+    // Check if requested status is valid
+    if (status && !validTransitions[order.status].includes(status)) {
+      return res.status(400).json({
+        error: `Invalid status transition from "${order.status}" → "${status}"`
+      });
+    }
+
     if (status) order.status = status;
     if (driverId) order.driverId = driverId;
 
