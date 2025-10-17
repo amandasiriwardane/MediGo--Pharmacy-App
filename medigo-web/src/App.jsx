@@ -5,49 +5,30 @@ import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
 import PrivateRoute from './components/common/PrivateRoute';
 import RoleRoute from './components/common/RoleRoute';
+
+// Auth Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 
-// Temporary placeholder components for testing
-const Home = () => (
-  <Box sx={{ minHeight: '70vh', p: 4 }}>
-    <h1>Home Page - Coming Soon</h1>
-    <p>Product listings will appear here</p>
-  </Box>
-);
+// Customer Pages
+import Home from './pages/customer/Home';
+import Products from './pages/customer/Products';
+import ProductDetail from './pages/customer/ProductDetail';
+import Checkout from './pages/customer/Checkout';
+import MyOrders from './pages/customer/MyOrders';
 
-const Products = () => (
-  <Box sx={{ minHeight: '70vh', p: 4 }}>
-    <h1>Products Page - Coming Soon</h1>
-    <p>Browse all products with search and filters</p>
-  </Box>
-);
+import Cart from './pages/customer/Cart';
 
-const Cart = () => (
-  <Box sx={{ minHeight: '70vh', p: 4 }}>
-    <h1>Cart Page - Coming Soon</h1>
-    <p>Your shopping cart items will appear here</p>
-  </Box>
-);
-
-const MyOrders = () => (
-  <Box sx={{ minHeight: '70vh', p: 4 }}>
-    <h1>My Orders - Coming Soon</h1>
-    <p>Track your order history and status</p>
-  </Box>
-);
 
 const PharmacyDashboard = () => (
   <Box sx={{ minHeight: '70vh', p: 4 }}>
-    <h1>Pharmacy Dashboard - Coming Soon</h1>
-    <p>Manage your products and incoming orders</p>
+    <h1>Pharmacy Dashboard - Coming in Phase 3</h1>
   </Box>
 );
 
 const DriverDashboard = () => (
   <Box sx={{ minHeight: '70vh', p: 4 }}>
-    <h1>Driver Dashboard - Coming Soon</h1>
-    <p>View available deliveries and manage your routes</p>
+    <h1>Driver Dashboard - Coming in Phase 4</h1>
   </Box>
 );
 
@@ -62,6 +43,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
 
           {/* Customer Routes */}
           <Route
@@ -70,6 +52,16 @@ function App() {
               <PrivateRoute>
                 <RoleRoute allowedRoles={['customer']}>
                   <Cart />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['customer']}>
+                  <Checkout />
                 </RoleRoute>
               </PrivateRoute>
             }
