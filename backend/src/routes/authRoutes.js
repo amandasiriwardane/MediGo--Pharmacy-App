@@ -1,7 +1,6 @@
 
 
 const express = require('express');
-const { body } = require('express-validator');
 const {
   register,
   login,
@@ -16,7 +15,7 @@ const router = express.Router();
 
 
 router.post('/register', registerValidation, register);
-router.post('/login', login);
+router.post('/login', loginValidation, login);
 router.get('/me', protect, getMe);
 router.put('/update-profile', protect, updateProfile);
 router.put('/update-password', protect, updatePassword);
