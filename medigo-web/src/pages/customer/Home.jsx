@@ -84,7 +84,7 @@ const Home = () => {
       >
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="h2" gutterBottom fontWeight="bold">
                 Your Health, Delivered
               </Typography>
@@ -112,7 +112,7 @@ const Home = () => {
                 )}
               </Box>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Box
                 component="img"
                 src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600"
@@ -137,7 +137,7 @@ const Home = () => {
         </Typography>
         <Grid container spacing={3}>
           {features.map((feature, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
               <Card sx={{ height: '100%', textAlign: 'center', p: 2 }}>
                 <CardContent>
                   <Box sx={{ color: 'primary.main', mb: 2 }}>
@@ -171,7 +171,7 @@ const Home = () => {
         ) : (
           <Grid container spacing={3}>
             {products.slice(0, 8).map((product) => (
-              <Grid item xs={12} sm={6} md={3} key={product._id}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={product._id}>
                 <ProductCard product={product} onAddToCart={handleAddToCart} />
               </Grid>
             ))}

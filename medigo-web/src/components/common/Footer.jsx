@@ -15,7 +15,7 @@ const Footer = () => {
     >
       <Container maxWidth="lg">
         <Grid container spacing={4}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <LocalPharmacy sx={{ mr: 1 }} />
               <Typography variant="h6" fontWeight="bold">
@@ -27,7 +27,7 @@ const Footer = () => {
             </Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">
               Quick Links
             </Typography>
@@ -47,7 +47,7 @@ const Footer = () => {
             </Box>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">
               Contact Us
             </Typography>

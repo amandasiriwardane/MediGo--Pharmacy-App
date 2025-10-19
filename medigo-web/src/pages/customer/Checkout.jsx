@@ -120,7 +120,7 @@ const Checkout = () => {
       </Typography>
 
       <Grid container spacing={4}>
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">
               Delivery Address
@@ -140,7 +140,7 @@ const Checkout = () => {
                 helperText={formik.touched.fullAddress && formik.errors.fullAddress}
               />
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     name="city"
@@ -153,7 +153,7 @@ const Checkout = () => {
                     helperText={formik.touched.city && formik.errors.city}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     name="state"
@@ -168,7 +168,7 @@ const Checkout = () => {
                 </Grid>
               </Grid>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     name="zipCode"
@@ -181,7 +181,7 @@ const Checkout = () => {
                     helperText={formik.touched.zipCode && formik.errors.zipCode}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     name="phone"
@@ -236,7 +236,7 @@ const Checkout = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">
               Order Summary

@@ -1,0 +1,814 @@
+# Phase 1 - Common Components & Authentication
+
+## 1. src/components/common/Loader.jsx
+
+```jsx
+import React from 'react';
+import { Box, CircularProgress, Typography } from '@mui/material';
+
+const Loader = ({ message = 'Loading...' }) => {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '50vh',
+        gap: 2
+      }}
+    >
+      <CircularProgress size={60} />
+      <Typography variant="body1" color="text.secondary">
+        {message}
+      </Typography>
+    </Box>
+  );
+};
+
+export default Loader;
+```
+
+---
+
+## 2. src/components/common/PrivateRoute.jsx
+
+```jsx
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+
+const PrivateRoute = ({ children }) => {
+  const { user } = useSelector((state) => state.auth);
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+export default PrivateRoute;
+```
+
+---
+
+## 3. src/components/common/RoleRoute.jsx
+
+```jsx
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+
+const RoleRoute = ({ children, allowedRoles }) => {
+  const { user } = useSelector((state) => state.auth);
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    // Redirect to appropriate dashboard based on role
+    const dashboardRoutes = {
+      customer: '/',
+      pharmacy: '/pharmacy/dashboard',
+      driver: '/driver/dashboard',
+      admin: '/admin/dashboard'
+    };
+    return <Navigate to={dashboardRoutes[user.role] || '/'} replace />;
+  }
+
+  return children;
+};
+
+export default RoleRoute;
+```
+
+---
+
+## 4. src/components/common/Navbar.jsx
+
+```jsx
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Badge,
+  Menu,
+  MenuItem,
+  Box,
+  Container
+} from '@mui/material';
+import {
+  ShoppingCart,
+  Person,
+  LocalPharmacy,
+  LocalShipping,
+  Menu as MenuIcon
+} from '@mui/icons-material';
+import { logout } from '../../redux/slices/authSlice';
+import { toast } from 'react-toastify';
+
+const Navbar = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { items } = useSelector((state) => state.cart);
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    handleClose();
+    navigate('/login');
+    toast.success('Logged out successfully');
+  };
+
+  const getDashboardLink = () => {
+    if (!user) return '/';
+    switch (user.role) {
+      case 'pharmacy':
+        return '/pharmacy/dashboard';
+      case 'driver':
+        return '/driver/dashboard';
+      case 'admin':
+        return '/admin/dashboard';
+      default:
+        return '/';
+    }
+  };
+
+  return (
+    <AppBar position="sticky">
+      <Container maxWidth="xl">
+        <Toolbar disableGutters>
+          {/* Logo */}
+          <LocalPharmacy sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
+          <Typography
+            variant="h6"
+            noWrap
+            component={Link}
+            to="/"
+            sx={{
+              mr: 2,
+              display: { xs: 'none', md: 'flex' },
+              fontWeight: 700,
+              color: 'inherit',
+              textDecoration: 'none'
+            }}
+          >
+            MediGo
+          </Typography>
+
+          {/* Mobile Logo */}
+          <LocalPharmacy sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
+          <Typography
+            variant="h6"
+            noWrap
+            component={Link}
+            to="/"
+            sx={{
+              mr: 2,
+              display: { xs: 'flex', md: 'none' },
+              flexGrow: 1,
+              fontWeight: 700,
+              color: 'inherit',
+              textDecoration: 'none'
+            }}
+          >
+            MediGo
+          </Typography>
+
+          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, gap: 2 }}>
+            <Button color="inherit" component={Link} to="/">
+              Home
+            </Button>
+            <Button color="inherit" component={Link} to="/products">
+              Products
+            </Button>
+            {user && user.role === 'customer' && (
+              <Button color="inherit" component={Link} to="/orders">
+                My Orders
+              </Button>
+            )}
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            {/* Cart Icon (Customer only) */}
+            {user && user.role === 'customer' && (
+              <IconButton
+                color="inherit"
+                component={Link}
+                to="/cart"
+              >
+                <Badge badgeContent={items.length} color="error">
+                  <ShoppingCart />
+                </Badge>
+              </IconButton>
+            )}
+
+            {/* User Menu */}
+            {user ? (
+              <>
+                <IconButton
+                  size="large"
+                  onClick={handleMenu}
+                  color="inherit"
+                >
+                  <Person />
+                </IconButton>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleClose}
+                >
+                  <MenuItem disabled>
+                    <Typography variant="body2" color="text.secondary">
+                      {user.email}
+                    </Typography>
+                  </MenuItem>
+                  <MenuItem onClick={() => { navigate(getDashboardLink()); handleClose(); }}>
+                    Dashboard
+                  </MenuItem>
+                  <MenuItem onClick={() => { navigate('/profile'); handleClose(); }}>
+                    Profile
+                  </MenuItem>
+                  <MenuItem onClick={handleLogout}>
+                    Logout
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              <>
+                <Button color="inherit" component={Link} to="/login">
+                  Login
+                </Button>
+                <Button
+                  color="inherit"
+                  variant="outlined"
+                  component={Link}
+                  to="/register"
+                  sx={{ borderColor: 'white' }}
+                >
+                  Register
+                </Button>
+              </>
+            )}
+          </Box>
+        </Toolbar>
+      </Container>
+    </AppBar>
+  );
+};
+
+export default Navbar;
+```
+
+---
+
+## 5. src/components/common/Footer.jsx
+
+```jsx
+import React from 'react';
+import { Box, Container, Typography, Link, Grid } from '@mui/material';
+import { LocalPharmacy, Email, Phone, LocationOn } from '@mui/icons-material';
+
+const Footer = () => {
+  return (
+    <Box
+      component="footer"
+      sx={{
+        bgcolor: 'primary.main',
+        color: 'white',
+        py: 6,
+        mt: 'auto'
+      }}
+    >
+      <Container maxWidth="lg">
+        <Grid container spacing={4}>
+          {/* Brand */}
+          <Grid item xs={12} md={4}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <LocalPharmacy sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                MediGo
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Your trusted pharmacy delivery platform. Get medicines delivered to your doorstep quickly and safely.
+            </Typography>
+          </Grid>
+
+          {/* Quick Links */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Typography variant="h6" gutterBottom fontWeight="bold">
+              Quick Links
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Link href="/" color="inherit" underline="hover">
+                Home
+              </Link>
+              <Link href="/products" color="inherit" underline="hover">
+                Products
+              </Link>
+              <Link href="/about" color="inherit" underline="hover">
+                About Us
+              </Link>
+              <Link href="/contact" color="inherit" underline="hover">
+                Contact
+              </Link>
+            </Box>
+          </Grid>
+
+          {/* Contact Info */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Typography variant="h6" gutterBottom fontWeight="bold">
+              Contact Us
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Email fontSize="small" />
+                <Typography variant="body2">support@medigo.com</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Phone fontSize="small" />
+                <Typography variant="body2">+94 77 123 4567</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LocationOn fontSize="small" />
+                <Typography variant="body2">Colombo, Sri Lanka</Typography>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+
+        {/* Copyright */}
+        <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+          <Typography variant="body2" align="center">
+            © {new Date().getFullYear()} MediGo. All rights reserved.
+          </Typography>
+        </Box>
+      </Container>
+    </Box>
+  );
+};
+
+export default Footer;
+```
+
+---
+
+## 6. src/pages/auth/Login.jsx
+
+```jsx
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import {
+  Container,
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Link as MuiLink,
+  Alert
+} from '@mui/material';
+import { LocalPharmacy } from '@mui/icons-material';
+import { login, reset } from '../../redux/slices/authSlice';
+import { toast } from 'react-toastify';
+import Loader from '../../components/common/Loader';
+
+const Login = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user, isLoading, isError, isSuccess, message } = useSelector(
+    (state) => state.auth
+  );
+
+  const validationSchema = Yup.object({
+    email: Yup.string()
+      .email('Invalid email address')
+      .required('Email is required'),
+    password: Yup.string()
+      .required('Password is required')
+  });
+
+  const formik = useFormik({
+    initialValues: {
+      email: '',
+      password: ''
+    },
+    validationSchema,
+    onSubmit: (values) => {
+      dispatch(login(values));
+    }
+  });
+
+  useEffect(() => {
+    if (isError) {
+      toast.error(message);
+    }
+
+    if (isSuccess && user) {
+      toast.success('Login successful');
+      
+      // Redirect based on role
+      switch (user.role) {
+        case 'pharmacy':
+          navigate('/pharmacy/dashboard');
+          break;
+        case 'driver':
+          navigate('/driver/dashboard');
+          break;
+        case 'admin':
+          navigate('/admin/dashboard');
+          break;
+        default:
+          navigate('/');
+      }
+    }
+
+    dispatch(reset());
+  }, [user, isError, isSuccess, message, navigate, dispatch]);
+
+  if (isLoading) {
+    return <Loader message="Logging in..." />;
+  }
+
+  return (
+    <Container component="main" maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          marginBottom: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}
+      >
+        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}
+          >
+            <LocalPharmacy sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
+            <Typography component="h1" variant="h5" fontWeight="bold">
+              Sign In to MediGo
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Welcome back! Please login to your account
+            </Typography>
+          </Box>
+
+          <Box component="form" onSubmit={formik.handleSubmit} sx={{ mt: 3 }}>
+            <TextField
+              fullWidth
+              id="email"
+              name="email"
+              label="Email Address"
+              margin="normal"
+              autoComplete="email"
+              autoFocus
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.email && Boolean(formik.errors.email)}
+              helperText={formik.touched.email && formik.errors.email}
+            />
+            <TextField
+              fullWidth
+              id="password"
+              name="password"
+              label="Password"
+              type="password"
+              margin="normal"
+              autoComplete="current-password"
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.password && Boolean(formik.errors.password)}
+              helperText={formik.touched.password && formik.errors.password}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={isLoading}
+            >
+              Sign In
+            </Button>
+
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="body2">
+                Don't have an account?{' '}
+                <MuiLink component={Link} to="/register" underline="hover">
+                  Sign Up
+                </MuiLink>
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
+  );
+};
+
+export default Login;
+```
+
+---
+
+## 7. src/pages/auth/Register.jsx
+
+```jsx
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import {
+  Container,
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Link as MuiLink,
+  MenuItem,
+  Alert
+} from '@mui/material';
+import { LocalPharmacy } from '@mui/icons-material';
+import { register, reset } from '../../redux/slices/authSlice';
+import { toast } from 'react-toastify';
+import Loader from '../../components/common/Loader';
+
+const Register = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user, isLoading, isError, isSuccess, message } = useSelector(
+    (state) => state.auth
+  );
+
+  const validationSchema = Yup.object({
+    fullName: Yup.string()
+      .min(3, 'Name must be at least 3 characters')
+      .required('Full name is required'),
+    email: Yup.string()
+      .email('Invalid email address')
+      .required('Email is required'),
+    phone: Yup.string()
+      .required('Phone number is required')
+      .matches(/^[0-9+\-() ]+$/, 'Invalid phone number'),
+    password: Yup.string()
+      .min(6, 'Password must be at least 6 characters')
+      .required('Password is required'),
+    confirmPassword: Yup.string()
+      .oneOf([Yup.ref('password'), null], 'Passwords must match')
+      .required('Confirm password is required'),
+    role: Yup.string()
+      .oneOf(['customer', 'pharmacy', 'driver'])
+      .required('Please select a role')
+  });
+
+  const formik = useFormik({
+    initialValues: {
+      fullName: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      role: 'customer'
+    },
+    validationSchema,
+    onSubmit: (values) => {
+      const { confirmPassword, ...registerData } = values;
+      dispatch(register(registerData));
+    }
+  });
+
+  useEffect(() => {
+    if (isError) {
+      toast.error(message);
+    }
+
+    if (isSuccess && user) {
+      toast.success('Registration successful!');
+      
+      // Redirect based on role
+      switch (user.role) {
+        case 'pharmacy':
+          navigate('/pharmacy/dashboard');
+          break;
+        case 'driver':
+          navigate('/driver/dashboard');
+          break;
+        default:
+          navigate('/');
+      }
+    }
+
+    dispatch(reset());
+  }, [user, isError, isSuccess, message, navigate, dispatch]);
+
+  if (isLoading) {
+    return <Loader message="Creating your account..." />;
+  }
+
+  return (
+    <Container component="main" maxWidth="sm">
+      <Box
+        sx={{
+          marginTop: 8,
+          marginBottom: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}
+      >
+        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}
+          >
+            <LocalPharmacy sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
+            <Typography component="h1" variant="h5" fontWeight="bold">
+              Create Account
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Join MediGo today
+            </Typography>
+          </Box>
+
+          <Box component="form" onSubmit={formik.handleSubmit} sx={{ mt: 3 }}>
+            <TextField
+              fullWidth
+              id="fullName"
+              name="fullName"
+              label="Full Name"
+              margin="normal"
+              autoFocus
+              value={formik.values.fullName}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.fullName && Boolean(formik.errors.fullName)}
+              helperText={formik.touched.fullName && formik.errors.fullName}
+            />
+            <TextField
+              fullWidth
+              id="email"
+              name="email"
+              label="Email Address"
+              margin="normal"
+              autoComplete="email"
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.email && Boolean(formik.errors.email)}
+              helperText={formik.touched.email && formik.errors.email}
+            />
+            <TextField
+              fullWidth
+              id="phone"
+              name="phone"
+              label="Phone Number"
+              margin="normal"
+              placeholder="+94771234567"
+              value={formik.values.phone}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.phone && Boolean(formik.errors.phone)}
+              helperText={formik.touched.phone && formik.errors.phone}
+            />
+            <TextField
+              fullWidth
+              select
+              id="role"
+              name="role"
+              label="I am a"
+              margin="normal"
+              value={formik.values.role}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.role && Boolean(formik.errors.role)}
+              helperText={formik.touched.role && formik.errors.role}
+            >
+              <MenuItem value="customer">Customer</MenuItem>
+              <MenuItem value="pharmacy">Pharmacy Owner</MenuItem>
+              <MenuItem value="driver">Delivery Driver</MenuItem>
+            </TextField>
+            <TextField
+              fullWidth
+              id="password"
+              name="password"
+              label="Password"
+              type="password"
+              margin="normal"
+              autoComplete="new-password"
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.password && Boolean(formik.errors.password)}
+              helperText={formik.touched.password && formik.errors.password}
+            />
+            <TextField
+              fullWidth
+              id="confirmPassword"
+              name="confirmPassword"
+              label="Confirm Password"
+              type="password"
+              margin="normal"
+              autoComplete="new-password"
+              value={formik.values.confirmPassword}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
+              helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={isLoading}
+            >
+              Sign Up
+            </Button>
+
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="body2">
+                Already have an account?{' '}
+                <MuiLink component={Link} to="/login" underline="hover">
+                  Sign In
+                </MuiLink>
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
+  );
+};
+
+export default Register;
+```
+
+---
+
+## Summary of Phase 1
+
+✅ **Created:**
+1. Loader component - Reusable loading spinner
+2. PrivateRoute - Protects authenticated routes
+3. RoleRoute - Role-based access control
+4. Navbar - Navigation with cart, user menu
+5. Footer - Footer with links and info
+6. Login Page - Full form with validation
+7. Register Page - Registration with role selection
+
+**Features:**
+- Material-UI components
+- Form validation with Formik & Yup
+- Redux integration
+- Toast notifications
+- Responsive design
+- Role-based redirects
+
+---
+
+## Next: Phase 2 - Customer Components
+
+Ready to create:
+- Home page
+- Product listing & search
+- Product detail
+- Shopping cart
+- Checkout
+- Order tracking
+
+Should I continue? 🚀

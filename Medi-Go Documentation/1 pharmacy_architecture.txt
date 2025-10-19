@@ -1,0 +1,549 @@
+# Pharmacy Delivery Platform - System Architecture & Database Design
+
+## 1. System Architecture
+
+### High-Level Architecture
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        CLIENT LAYER                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   Customer   │  │   Pharmacy   │  │    Driver    │      │
+│  │     App      │  │   Dashboard  │  │   Dashboard  │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                      API GATEWAY (Express)                   │
+│                    JWT Authentication                        │
+│                  Role-Based Authorization                    │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                     BUSINESS LOGIC LAYER                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │   Auth   │  │  Order   │  │ Pharmacy │  │ Delivery │   │
+│  │ Service  │  │ Service  │  │ Service  │  │ Service  │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                      DATA LAYER                              │
+│                     MongoDB Database                         │
+│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐         │
+│  │Users │  │Orders│  │Products│ │Pharmacies│ │Reviews│     │
+│  └──────┘  └──────┘  └──────┘  └──────┘  └──────┘         │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                   EXTERNAL SERVICES                          │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │ Payment  │  │   Maps   │  │  Email   │  │  Cloud   │   │
+│  │ Gateway  │  │   API    │  │ Service  │  │ Storage  │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 2. Technology Stack
+
+### Frontend
+- **Framework**: React.js
+- **State Management**: Redux Toolkit / Context API
+- **Routing**: React Router v6
+- **UI Library**: Material-UI / Tailwind CSS
+- **HTTP Client**: Axios
+- **Form Handling**: React Hook Form
+- **Maps**: Leaflet / Google Maps API
+
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Authentication**: JWT (jsonwebtoken)
+- **Password Hashing**: bcrypt
+- **Validation**: express-validator / Joi
+- **File Upload**: Multer
+- **Real-time**: Socket.io (for order tracking)
+
+### Database
+- **Database**: MongoDB
+- **ODM**: Mongoose
+
+### DevOps & Tools
+- **Version Control**: Git
+- **Environment Variables**: dotenv
+- **API Testing**: Postman
+- **Deployment**: Vercel/Netlify (Frontend), Render/Railway (Backend)
+
+## 3. Database Schema Design
+
+### 3.1 User Collection
+```javascript
+{
+  _id: ObjectId,
+  fullName: String (required),
+  email: String (required, unique, lowercase),
+  password: String (required, hashed),
+  phone: String (required),
+  role: String (enum: ['customer', 'pharmacy', 'driver', 'admin']),
+  profileImage: String (URL),
+  isActive: Boolean (default: true),
+  isVerified: Boolean (default: false),
+  
+  // Customer specific fields
+  customerDetails: {
+    addresses: [{
+      addressType: String (enum: ['home', 'work', 'other']),
+      fullAddress: String,
+      city: String,
+      state: String,
+      zipCode: String,
+      latitude: Number,
+      longitude: Number,
+      isDefault: Boolean
+    }],
+    prescriptions: [{
+      fileName: String,
+      fileUrl: String,
+      uploadedAt: Date
+    }]
+  },
+  
+  // Pharmacy specific fields
+  pharmacyDetails: {
+    pharmacyName: String,
+    licenseNumber: String,
+    description: String,
+    address: {
+      fullAddress: String,
+      city: String,
+      state: String,
+      zipCode: String,
+      latitude: Number,
+      longitude: Number
+    },
+    operatingHours: [{
+      day: String,
+      openTime: String,
+      closeTime: String,
+      isClosed: Boolean
+    }],
+    documents: [{
+      docType: String,
+      fileUrl: String
+    }],
+    serviceRadius: Number (in km),
+    rating: Number (default: 0),
+    totalRatings: Number (default: 0),
+    isApproved: Boolean (default: false)
+  },
+  
+  // Driver specific fields
+  driverDetails: {
+    vehicleType: String (enum: ['bike', 'car', 'scooter']),
+    vehicleNumber: String,
+    licenseNumber: String,
+    licenseUrl: String,
+    currentLocation: {
+      latitude: Number,
+      longitude: Number,
+      lastUpdated: Date
+    },
+    isAvailable: Boolean (default: false),
+    rating: Number (default: 0),
+    totalRatings: Number (default: 0),
+    totalDeliveries: Number (default: 0),
+    isApproved: Boolean (default: false)
+  },
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### 3.2 Product Collection
+```javascript
+{
+  _id: ObjectId,
+  pharmacyId: ObjectId (ref: 'User'),
+  name: String (required),
+  description: String,
+  category: String (enum: ['prescription', 'otc', 'supplement', 'medical-equipment', 'personal-care']),
+  manufacturer: String,
+  images: [String] (URLs),
+  
+  pricing: {
+    price: Number (required),
+    discountPrice: Number,
+    discountPercentage: Number
+  },
+  
+  stock: {
+    quantity: Number (required),
+    unit: String (enum: ['piece', 'bottle', 'box', 'strip']),
+    lowStockThreshold: Number (default: 10)
+  },
+  
+  requiresPrescription: Boolean (default: false),
+  
+  specifications: {
+    expiryDate: Date,
+    batchNumber: String,
+    dosageForm: String (tablets, syrup, capsule, etc.),
+    strength: String
+  },
+  
+  tags: [String],
+  isActive: Boolean (default: true),
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### 3.3 Order Collection
+```javascript
+{
+  _id: ObjectId,
+  orderNumber: String (unique, auto-generated),
+  customerId: ObjectId (ref: 'User'),
+  pharmacyId: ObjectId (ref: 'User'),
+  driverId: ObjectId (ref: 'User'),
+  
+  items: [{
+    productId: ObjectId (ref: 'Product'),
+    productName: String,
+    quantity: Number,
+    price: Number,
+    requiresPrescription: Boolean,
+    prescriptionUrl: String
+  }],
+  
+  pricing: {
+    subtotal: Number,
+    deliveryFee: Number,
+    tax: Number,
+    discount: Number,
+    total: Number
+  },
+  
+  deliveryAddress: {
+    fullAddress: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    latitude: Number,
+    longitude: Number,
+    phone: String
+  },
+  
+  pharmacyAddress: {
+    fullAddress: String,
+    latitude: Number,
+    longitude: Number
+  },
+  
+  status: String (enum: [
+    'pending',           // Order placed
+    'confirmed',         // Pharmacy confirmed
+    'preparing',         // Pharmacy preparing
+    'ready-for-pickup',  // Ready for driver
+    'assigned',          // Driver assigned
+    'picked-up',         // Driver picked up
+    'out-for-delivery',  // On the way
+    'delivered',         // Completed
+    'cancelled'          // Cancelled
+  ]),
+  
+  paymentMethod: String (enum: ['cod', 'card', 'upi', 'wallet']),
+  paymentStatus: String (enum: ['pending', 'completed', 'failed', 'refunded']),
+  paymentId: String,
+  
+  statusHistory: [{
+    status: String,
+    timestamp: Date,
+    note: String
+  }],
+  
+  estimatedDeliveryTime: Date,
+  actualDeliveryTime: Date,
+  
+  cancellationReason: String,
+  cancelledBy: String (enum: ['customer', 'pharmacy', 'driver', 'admin']),
+  
+  specialInstructions: String,
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### 3.4 Review Collection
+```javascript
+{
+  _id: ObjectId,
+  orderId: ObjectId (ref: 'Order'),
+  customerId: ObjectId (ref: 'User'),
+  
+  // For pharmacy review
+  pharmacyId: ObjectId (ref: 'User'),
+  pharmacyRating: Number (1-5),
+  pharmacyReview: String,
+  
+  // For driver review
+  driverId: ObjectId (ref: 'User'),
+  driverRating: Number (1-5),
+  driverReview: String,
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### 3.5 Cart Collection (Optional - can also use localStorage)
+```javascript
+{
+  _id: ObjectId,
+  customerId: ObjectId (ref: 'User'),
+  pharmacyId: ObjectId (ref: 'User'),
+  
+  items: [{
+    productId: ObjectId (ref: 'Product'),
+    quantity: Number,
+    addedAt: Date
+  }],
+  
+  updatedAt: Date
+}
+```
+
+### 3.6 Notification Collection
+```javascript
+{
+  _id: ObjectId,
+  userId: ObjectId (ref: 'User'),
+  type: String (enum: ['order', 'delivery', 'promotion', 'system']),
+  title: String,
+  message: String,
+  isRead: Boolean (default: false),
+  data: Object (additional data),
+  createdAt: Date
+}
+```
+
+## 4. API Endpoints Structure
+
+### Authentication Routes (`/api/auth`)
+- POST `/register` - Register user (any role)
+- POST `/login` - Login user
+- POST `/logout` - Logout user
+- GET `/me` - Get current user
+- PUT `/update-profile` - Update profile
+- POST `/forgot-password` - Forgot password
+- POST `/reset-password` - Reset password
+- POST `/verify-email` - Verify email
+
+### Customer Routes (`/api/customer`)
+- GET `/pharmacies` - Get nearby pharmacies
+- GET `/pharmacies/:id` - Get pharmacy details
+- GET `/pharmacies/:id/products` - Get pharmacy products
+- GET `/products/search` - Search products
+- POST `/cart/add` - Add to cart
+- GET `/cart` - Get cart
+- DELETE `/cart/item/:id` - Remove from cart
+- POST `/orders` - Create order
+- GET `/orders` - Get my orders
+- GET `/orders/:id` - Get order details
+- PUT `/orders/:id/cancel` - Cancel order
+- POST `/reviews` - Add review
+- POST `/prescriptions/upload` - Upload prescription
+
+### Pharmacy Routes (`/api/pharmacy`)
+- GET `/dashboard/stats` - Get dashboard statistics
+- GET `/products` - Get my products
+- POST `/products` - Add product
+- PUT `/products/:id` - Update product
+- DELETE `/products/:id` - Delete product
+- GET `/orders` - Get incoming orders
+- PUT `/orders/:id/confirm` - Confirm order
+- PUT `/orders/:id/ready` - Mark ready for pickup
+- PUT `/orders/:id/cancel` - Cancel order
+- GET `/reviews` - Get my reviews
+- PUT `/profile` - Update pharmacy profile
+
+### Driver Routes (`/api/driver`)
+- GET `/dashboard/stats` - Get dashboard statistics
+- GET `/available-orders` - Get available orders
+- POST `/orders/:id/accept` - Accept order
+- PUT `/orders/:id/picked-up` - Mark picked up
+- PUT `/orders/:id/delivered` - Mark delivered
+- PUT `/location` - Update current location
+- PUT `/availability` - Toggle availability
+- GET `/earnings` - Get earnings history
+- GET `/deliveries` - Get delivery history
+
+### Admin Routes (`/api/admin`)
+- GET `/dashboard/stats` - Platform statistics
+- GET `/users` - Get all users
+- GET `/pharmacies/pending` - Pending pharmacy approvals
+- PUT `/pharmacies/:id/approve` - Approve pharmacy
+- GET `/drivers/pending` - Pending driver approvals
+- PUT `/drivers/:id/approve` - Approve driver
+- GET `/orders` - Get all orders
+- DELETE `/users/:id` - Delete user
+
+## 5. Folder Structure
+
+```
+pharmacy-delivery-platform/
+│
+├── backend/
+│   ├── config/
+│   │   ├── db.js
+│   │   └── cloudinary.js
+│   │
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Product.js
+│   │   ├── Order.js
+│   │   ├── Review.js
+│   │   ├── Cart.js
+│   │   └── Notification.js
+│   │
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── customerController.js
+│   │   ├── pharmacyController.js
+│   │   ├── driverController.js
+│   │   └── adminController.js
+│   │
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── customerRoutes.js
+│   │   ├── pharmacyRoutes.js
+│   │   ├── driverRoutes.js
+│   │   └── adminRoutes.js
+│   │
+│   ├── middleware/
+│   │   ├── auth.js
+│   │   ├── roleCheck.js
+│   │   ├── errorHandler.js
+│   │   └── upload.js
+│   │
+│   ├── utils/
+│   │   ├── generateToken.js
+│   │   ├── sendEmail.js
+│   │   ├── calculateDistance.js
+│   │   └── validators.js
+│   │
+│   ├── .env
+│   ├── .gitignore
+│   ├── server.js
+│   └── package.json
+│
+└── frontend/
+    ├── public/
+    │
+    ├── src/
+    │   ├── components/
+    │   │   ├── common/
+    │   │   ├── customer/
+    │   │   ├── pharmacy/
+    │   │   ├── driver/
+    │   │   └── admin/
+    │   │
+    │   ├── pages/
+    │   │   ├── auth/
+    │   │   ├── customer/
+    │   │   ├── pharmacy/
+    │   │   ├── driver/
+    │   │   └── admin/
+    │   │
+    │   ├── redux/
+    │   │   ├── slices/
+    │   │   └── store.js
+    │   │
+    │   ├── services/
+    │   │   └── api.js
+    │   │
+    │   ├── utils/
+    │   │   ├── constants.js
+    │   │   └── helpers.js
+    │   │
+    │   ├── App.js
+    │   ├── index.js
+    │   └── routes.js
+    │
+    ├── .env
+    ├── .gitignore
+    └── package.json
+```
+
+## 6. Key Features Implementation Notes
+
+### Real-time Order Tracking
+- Use Socket.io for real-time updates
+- Emit events when order status changes
+- Update driver location every 10-30 seconds
+
+### Distance Calculation
+- Use Haversine formula for distance calculation
+- Filter pharmacies within service radius
+- Calculate delivery fees based on distance
+
+### Payment Integration
+- Implement Stripe/Razorpay for card payments
+- Support COD (Cash on Delivery)
+- Handle payment webhooks for status updates
+
+### File Uploads
+- Use Multer for handling file uploads
+- Store in Cloudinary or AWS S3
+- Validate file types (images, PDFs for prescriptions)
+
+### Security
+- Hash passwords with bcrypt
+- Use JWT for authentication
+- Implement rate limiting
+- Validate and sanitize all inputs
+- Use HTTPS in production
+- Set secure headers with helmet
+
+### Performance
+- Implement pagination for lists
+- Add database indexing on frequently queried fields
+- Cache frequent queries with Redis (optional)
+- Optimize images
+
+## 7. Development Phases
+
+### Phase 1: Foundation (Week 1-2)
+- Setup project structure
+- Database connection
+- User authentication
+- Basic CRUD for all models
+
+### Phase 2: Customer Features (Week 3)
+- Browse pharmacies
+- Product search
+- Cart functionality
+- Order placement
+
+### Phase 3: Pharmacy Features (Week 4)
+- Product management
+- Order management
+- Dashboard
+
+### Phase 4: Driver Features (Week 5)
+- Available orders
+- Accept/deliver orders
+- Location tracking
+
+### Phase 5: Polish & Deploy (Week 6)
+- Reviews & ratings
+- Notifications
+- Admin panel
+- Testing & deployment
+```

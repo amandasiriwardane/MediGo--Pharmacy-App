@@ -105,7 +105,7 @@ const ProductDetail = () => {
       </Button>
 
       <Grid container spacing={4}>
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Paper elevation={2} sx={{ p: 2 }}>
             <Box
               component="img"
@@ -120,7 +120,7 @@ const ProductDetail = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Typography variant="h4" gutterBottom fontWeight="bold">
             {product.name}
           </Typography>
@@ -170,7 +170,7 @@ const ProductDetail = () => {
           <Card sx={{ mb: 3, bgcolor: 'grey.50' }}>
             <CardContent>
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     Manufacturer
                   </Typography>
@@ -179,7 +179,7 @@ const ProductDetail = () => {
                   </Typography>
                 </Grid>
                 {product.specifications?.strength && (
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Typography variant="body2" color="text.secondary">
                       Strength
                     </Typography>
@@ -189,7 +189,7 @@ const ProductDetail = () => {
                   </Grid>
                 )}
                 {product.specifications?.dosageForm && (
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Typography variant="body2" color="text.secondary">
                       Form
                     </Typography>
@@ -198,7 +198,7 @@ const ProductDetail = () => {
                     </Typography>
                   </Grid>
                 )}
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     Unit
                   </Typography>

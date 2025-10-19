@@ -89,7 +89,7 @@ const Products = () => {
 
       <Paper sx={{ p: 3, mb: 4 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <TextField
               fullWidth
               placeholder="Search for medicines..."
@@ -104,7 +104,7 @@ const Products = () => {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>            
             <TextField
               fullWidth
               select
@@ -131,7 +131,7 @@ const Products = () => {
             <>
               <Grid container spacing={3}>
                 {products.map((product) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={product._id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={product._id}>
                     <ProductCard product={product} onAddToCart={handleAddToCart} />
                   </Grid>
                 ))}

@@ -103,7 +103,7 @@ const Cart = () => {
       </Box>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           {items.map((item) => {
             const price = item.pricing?.discountPrice || item.pricing?.price || 0;
             const originalPrice = item.pricing?.price || 0;
@@ -113,7 +113,7 @@ const Cart = () => {
               <Card key={item._id} sx={{ mb: 2 }}>
                 <CardContent>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={3}>
+                    <Grid size={{ xs: 12, sm: 3 }}>
                       <CardMedia
                         component="img"
                         image={item.images?.[0] || 'https://via.placeholder.com/150?text=No+Image'}
@@ -126,7 +126,7 @@ const Cart = () => {
                       />
                     </Grid>
 
-                    <Grid item xs={12} sm={9}>
+                    <Grid size={{ xs: 12, sm: 9 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="h6" gutterBottom>
@@ -199,7 +199,7 @@ const Cart = () => {
           })}
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">
               Order Summary

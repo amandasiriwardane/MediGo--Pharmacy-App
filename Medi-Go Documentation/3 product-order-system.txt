@@ -1,0 +1,1439 @@
+# Product & Order System - Complete Implementation
+
+## Files to Create
+
+```
+backend/src/
+├── models/
+│   ├── Product.js
+│   └── Order.js
+├── controllers/
+│   ├── productController.js
+│   └── orderController.js
+├── routes/
+│   ├── productRoutes.js
+│   └── orderRoutes.js
+└── middleware/validators/
+    ├── productValidator.js
+    └── orderValidator.js
+```
+
+---
+
+## 1. src/models/Product.js
+
+```javascript
+const mongoose = require('mongoose');
+
+const productSchema = new mongoose.Schema({
+  pharmacyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  name: {
+    type: String,
+    required: [true, 'Product name is required'],
+    trim: true
+  },
+  description: {
+    type: String,
+    required: [true, 'Product description is required']
+  },
+  category: {
+    type: String,
+    required: [true, 'Product category is required'],
+    enum: ['prescription', 'otc', 'supplement', 'medical-equipment', 'personal-care']
+  },
+  manufacturer: {
+    type: String,
+    required: [true, 'Manufacturer name is required']
+  },
+  images: [{
+    type: String
+  }],
+  
+  pricing: {
+    price: {
+      type: Number,
+      required: [true, 'Price is required'],
+      min: 0
+    },
+    discountPrice: {
+      type: Number,
+      min: 0
+    },
+    discountPercentage: {
+      type: Number,
+      min: 0,
+      max: 100
+    }
+  },
+  
+  stock: {
+    quantity: {
+      type: Number,
+      required: [true, 'Stock quantity is required'],
+      min: 0,
+      default: 0
+    },
+    unit: {
+      type: String,
+      enum: ['piece', 'bottle', 'box', 'strip'],
+      default: 'piece'
+    },
+    lowStockThreshold: {
+      type: Number,
+      default: 10
+    }
+  },
+  
+  requiresPrescription: {
+    type: Boolean,
+    default: false
+  },
+  
+  specifications: {
+    expiryDate: Date,
+    batchNumber: String,
+    dosageForm: String, // tablets, syrup, capsule, etc.
+    strength: String
+  },
+  
+  tags: [String],
+  
+  isActive: {
+    type: Boolean,
+    default: true
+  }
+}, {
+  timestamps: true
+});
+
+// Create index for search
+productSchema.index({ name: 'text', description: 'text', tags: 'text' });
+
+// Virtual for checking if product is in low stock
+productSchema.virtual('isLowStock').get(function() {
+  return this.stock.quantity <= this.stock.lowStockThreshold;
+});
+
+// Virtual for checking if product is out of stock
+productSchema.virtual('isOutOfStock').get(function() {
+  return this.stock.quantity === 0;
+});
+
+module.exports = mongoose.model('Product', productSchema);
+```
+
+---
+
+## 2. src/models/Order.js
+
+```javascript
+const mongoose = require('mongoose');
+
+const orderSchema = new mongoose.Schema({
+  orderNumber: {
+    type: String,
+    unique: true
+  },
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  pharmacyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  driverId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  
+  items: [{
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product',
+      required: true
+    },
+    productName: {
+      type: String,
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1
+    },
+    price: {
+      type: Number,
+      required: true
+    },
+    requiresPrescription: {
+      type: Boolean,
+      default: false
+    },
+    prescriptionUrl: String
+  }],
+  
+  pricing: {
+    subtotal: {
+      type: Number,
+      required: true
+    },
+    deliveryFee: {
+      type: Number,
+      default: 0
+    },
+    tax: {
+      type: Number,
+      default: 0
+    },
+    discount: {
+      type: Number,
+      default: 0
+    },
+    total: {
+      type: Number,
+      required: true
+    }
+  },
+  
+  deliveryAddress: {
+    fullAddress: {
+      type: String,
+      required: true
+    },
+    city: {
+      type: String,
+      required: true
+    },
+    state: {
+      type: String,
+      required: true
+    },
+    zipCode: {
+      type: String,
+      required: true
+    },
+    latitude: Number,
+    longitude: Number,
+    phone: {
+      type: String,
+      required: true
+    }
+  },
+  
+  pharmacyAddress: {
+    fullAddress: String,
+    latitude: Number,
+    longitude: Number
+  },
+  
+  status: {
+    type: String,
+    enum: [
+      'pending',
+      'confirmed',
+      'preparing',
+      'ready-for-pickup',
+      'assigned',
+      'picked-up',
+      'out-for-delivery',
+      'delivered',
+      'cancelled'
+    ],
+    default: 'pending'
+  },
+  
+  paymentMethod: {
+    type: String,
+    enum: ['cod', 'card', 'upi', 'wallet'],
+    required: true
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'refunded'],
+    default: 'pending'
+  },
+  paymentId: String,
+  
+  statusHistory: [{
+    status: String,
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    note: String
+  }],
+  
+  estimatedDeliveryTime: Date,
+  actualDeliveryTime: Date,
+  
+  cancellationReason: String,
+  cancelledBy: {
+    type: String,
+    enum: ['customer', 'pharmacy', 'driver', 'admin']
+  },
+  
+  specialInstructions: String
+}, {
+  timestamps: true
+});
+
+// Generate order number before saving
+orderSchema.pre('save', async function(next) {
+  if (!this.orderNumber) {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    this.orderNumber = `ORD${year}${month}${day}${random}`;
+  }
+  next();
+});
+
+// Add status to history when status changes
+orderSchema.pre('save', function(next) {
+  if (this.isModified('status')) {
+    this.statusHistory.push({
+      status: this.status,
+      timestamp: new Date()
+    });
+  }
+  next();
+});
+
+module.exports = mongoose.model('Order', orderSchema);
+```
+
+---
+
+## 3. src/controllers/productController.js
+
+```javascript
+const Product = require('../models/Product');
+const User = require('../models/User');
+const { validationResult } = require('express-validator');
+
+// @desc    Get all products (with filters and search)
+// @route   GET /api/products
+// @access  Public
+exports.getProducts = async (req, res, next) => {
+  try {
+    const { 
+      search, 
+      category, 
+      pharmacyId, 
+      minPrice, 
+      maxPrice,
+      page = 1, 
+      limit = 20 
+    } = req.query;
+
+    // Build query
+    let query = { isActive: true };
+
+    // Search by name, description, or tags
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (pharmacyId) {
+      query.pharmacyId = pharmacyId;
+    }
+
+    // Price range filter
+    if (minPrice || maxPrice) {
+      query['pricing.price'] = {};
+      if (minPrice) query['pricing.price'].$gte = Number(minPrice);
+      if (maxPrice) query['pricing.price'].$lte = Number(maxPrice);
+    }
+
+    // Execute query with pagination
+    const products = await Product.find(query)
+      .populate('pharmacyId', 'pharmacyDetails.pharmacyName pharmacyDetails.address')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+
+    const count = await Product.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: products,
+      pagination: {
+        total: count,
+        page: Number(page),
+        pages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get single product
+// @route   GET /api/products/:id
+// @access  Public
+exports.getProductById = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id)
+      .populate('pharmacyId', 'pharmacyDetails.pharmacyName pharmacyDetails.address pharmacyDetails.phone');
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create new product (Pharmacy only)
+// @route   POST /api/products
+// @access  Private (Pharmacy)
+exports.createProduct = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Add pharmacy ID from logged in user
+    req.body.pharmacyId = req.user.id;
+
+    const product = await Product.create(req.body);
+
+    res.status(201).json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update product (Pharmacy only - own products)
+// @route   PUT /api/products/:id
+// @access  Private (Pharmacy)
+exports.updateProduct = async (req, res, next) => {
+  try {
+    let product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Make sure user is product owner
+    if (product.pharmacyId.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized to update this product' });
+    }
+
+    product = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete product (Pharmacy only - own products)
+// @route   DELETE /api/products/:id
+// @access  Private (Pharmacy)
+exports.deleteProduct = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Make sure user is product owner
+    if (product.pharmacyId.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized to delete this product' });
+    }
+
+    // Soft delete - just mark as inactive
+    product.isActive = false;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Product deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get pharmacy's own products
+// @route   GET /api/products/my-products
+// @access  Private (Pharmacy)
+exports.getMyProducts = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+
+    const products = await Product.find({ pharmacyId: req.user.id })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+
+    const count = await Product.countDocuments({ pharmacyId: req.user.id });
+
+    res.status(200).json({
+      success: true,
+      data: products,
+      pagination: {
+        total: count,
+        page: Number(page),
+        pages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update product stock
+// @route   PUT /api/products/:id/stock
+// @access  Private (Pharmacy)
+exports.updateStock = async (req, res, next) => {
+  try {
+    const { quantity } = req.body;
+
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Make sure user is product owner
+    if (product.pharmacyId.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    product.stock.quantity = quantity;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+---
+
+## 4. src/controllers/orderController.js
+
+```javascript
+const Order = require('../models/Order');
+const Product = require('../models/Product');
+const User = require('../models/User');
+const { validationResult } = require('express-validator');
+
+// @desc    Create new order
+// @route   POST /api/orders
+// @access  Private (Customer)
+exports.createOrder = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { items, deliveryAddress, paymentMethod, specialInstructions } = req.body;
+
+    // Verify all products exist and have enough stock
+    let subtotal = 0;
+    let pharmacyId = null;
+    const orderItems = [];
+
+    for (const item of items) {
+      const product = await Product.findById(item.productId);
+
+      if (!product) {
+        return res.status(404).json({ 
+          message: `Product not found: ${item.productId}` 
+        });
+      }
+
+      if (!product.isActive) {
+        return res.status(400).json({ 
+          message: `Product is not available: ${product.name}` 
+        });
+      }
+
+      if (product.stock.quantity < item.quantity) {
+        return res.status(400).json({ 
+          message: `Insufficient stock for ${product.name}. Available: ${product.stock.quantity}` 
+        });
+      }
+
+      // All items must be from same pharmacy
+      if (!pharmacyId) {
+        pharmacyId = product.pharmacyId;
+      } else if (pharmacyId.toString() !== product.pharmacyId.toString()) {
+        return res.status(400).json({ 
+          message: 'All items must be from the same pharmacy' 
+        });
+      }
+
+      const itemPrice = product.pricing.discountPrice || product.pricing.price;
+      subtotal += itemPrice * item.quantity;
+
+      orderItems.push({
+        productId: product._id,
+        productName: product.name,
+        quantity: item.quantity,
+        price: itemPrice,
+        requiresPrescription: product.requiresPrescription,
+        prescriptionUrl: item.prescriptionUrl
+      });
+    }
+
+    // Calculate delivery fee (simple calculation, can be enhanced)
+    const deliveryFee = 50; // Fixed for now
+    const tax = subtotal * 0.05; // 5% tax
+    const total = subtotal + deliveryFee + tax;
+
+    // Get pharmacy address
+    const pharmacy = await User.findById(pharmacyId);
+    const pharmacyAddress = {
+      fullAddress: pharmacy.pharmacyDetails.address.fullAddress,
+      latitude: pharmacy.pharmacyDetails.address.latitude,
+      longitude: pharmacy.pharmacyDetails.address.longitude
+    };
+
+    // Create order
+    const order = await Order.create({
+      customerId: req.user.id,
+      pharmacyId,
+      items: orderItems,
+      pricing: {
+        subtotal,
+        deliveryFee,
+        tax,
+        total
+      },
+      deliveryAddress,
+      pharmacyAddress,
+      paymentMethod,
+      specialInstructions,
+      estimatedDeliveryTime: new Date(Date.now() + 60 * 60 * 1000) // 1 hour from now
+    });
+
+    // Reduce product stock
+    for (const item of items) {
+      await Product.findByIdAndUpdate(item.productId, {
+        $inc: { 'stock.quantity': -item.quantity }
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all orders (filtered by role)
+// @route   GET /api/orders
+// @access  Private
+exports.getOrders = async (req, res, next) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+
+    let query = {};
+
+    // Filter based on user role
+    if (req.user.role === 'customer') {
+      query.customerId = req.user.id;
+    } else if (req.user.role === 'pharmacy') {
+      query.pharmacyId = req.user.id;
+    } else if (req.user.role === 'driver') {
+      query.driverId = req.user.id;
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
+    const orders = await Order.find(query)
+      .populate('customerId', 'fullName email phone')
+      .populate('pharmacyId', 'pharmacyDetails.pharmacyName')
+      .populate('driverId', 'fullName phone')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+
+    const count = await Order.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: orders,
+      pagination: {
+        total: count,
+        page: Number(page),
+        pages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get single order
+// @route   GET /api/orders/:id
+// @access  Private
+exports.getOrderById = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('customerId', 'fullName email phone')
+      .populate('pharmacyId', 'pharmacyDetails.pharmacyName pharmacyDetails.address')
+      .populate('driverId', 'fullName phone driverDetails.vehicleType driverDetails.vehicleNumber')
+      .populate('items.productId', 'name images');
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if user has access to this order
+    const hasAccess = 
+      order.customerId._id.toString() === req.user.id ||
+      order.pharmacyId._id.toString() === req.user.id ||
+      (order.driverId && order.driverId._id.toString() === req.user.id) ||
+      req.user.role === 'admin';
+
+    if (!hasAccess) {
+      return res.status(401).json({ message: 'Not authorized to view this order' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update order status
+// @route   PUT /api/orders/:id/status
+// @access  Private
+exports.updateOrderStatus = async (req, res, next) => {
+  try {
+    const { status, note } = req.body;
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Role-based status update permissions
+    const allowedTransitions = {
+      pharmacy: ['confirmed', 'preparing', 'ready-for-pickup', 'cancelled'],
+      driver: ['picked-up', 'out-for-delivery', 'delivered'],
+      customer: ['cancelled']
+    };
+
+    if (!allowedTransitions[req.user.role]?.includes(status)) {
+      return res.status(403).json({ 
+        message: `${req.user.role} cannot update status to ${status}` 
+      });
+    }
+
+    // Additional authorization checks
+    if (req.user.role === 'pharmacy' && order.pharmacyId.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    if (req.user.role === 'driver' && order.driverId?.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    if (req.user.role === 'customer' && order.customerId.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    // Update status (this will trigger the pre-save hook to add to statusHistory)
+    order.status = status;
+
+    if (status === 'delivered') {
+      order.actualDeliveryTime = new Date();
+      order.paymentStatus = 'completed';
+    }
+
+    if (status === 'cancelled') {
+      order.cancelledBy = req.user.role;
+      order.cancellationReason = note;
+
+      // Restore product stock
+      for (const item of order.items) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { 'stock.quantity': item.quantity }
+        });
+      }
+    }
+
+    await order.save();
+
+    // Add note to the latest status history entry after save
+    if (note) {
+      order.statusHistory[order.statusHistory.length - 1].note = note;
+      await order.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Assign driver to order
+// @route   PUT /api/orders/:id/assign-driver
+// @access  Private (Pharmacy or Driver)
+exports.assignDriver = async (req, res, next) => {
+  try {
+    const { driverId } = req.body;
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Only pharmacy can assign or driver can self-assign
+    if (req.user.role === 'pharmacy') {
+      if (order.pharmacyId.toString() !== req.user.id) {
+        return res.status(401).json({ message: 'Not authorized' });
+      }
+    } else if (req.user.role === 'driver') {
+      if (driverId !== req.user.id) {
+        return res.status(401).json({ message: 'Can only assign yourself' });
+      }
+    } else {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // Check if driver exists and is approved
+    const driver = await User.findById(driverId);
+    if (!driver || driver.role !== 'driver') {
+      return res.status(404).json({ message: 'Driver not found' });
+    }
+
+    if (!driver.driverDetails.isApproved) {
+      return res.status(400).json({ message: 'Driver is not approved' });
+    }
+
+    order.driverId = driverId;
+    order.status = 'assigned';
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get available orders for drivers
+// @route   GET /api/orders/available
+// @access  Private (Driver)
+exports.getAvailableOrders = async (req, res, next) => {
+  try {
+    const orders = await Order.find({
+      status: 'ready-for-pickup',
+      driverId: { $exists: false }
+    })
+      .populate('pharmacyId', 'pharmacyDetails.pharmacyName pharmacyDetails.address')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: orders
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Cancel order
+// @route   PUT /api/orders/:id/cancel
+// @access  Private
+exports.cancelOrder = async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check authorization
+    if (req.user.role === 'customer' && order.customerId.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    if (req.user.role === 'pharmacy' && order.pharmacyId.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    // Can't cancel delivered orders
+    if (order.status === 'delivered') {
+      return res.status(400).json({ message: 'Cannot cancel delivered order' });
+    }
+
+    order.status = 'cancelled';
+    order.cancelledBy = req.user.role;
+    order.cancellationReason = reason;
+
+    // Restore product stock
+    for (const item of order.items) {
+      await Product.findByIdAndUpdate(item.productId, {
+        $inc: { 'stock.quantity': item.quantity }
+      });
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+---
+
+## 5. src/routes/productRoutes.js
+
+```javascript
+const express = require('express');
+const {
+  getProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getMyProducts,
+  updateStock
+} = require('../controllers/productController');
+const { protect } = require('../middleware/auth');
+const { authorize } = require('../middleware/roleCheck');
+const { productValidation } = require('../middleware/validators/productValidator');
+
+const router = express.Router();
+
+// Public routes
+router.get('/', getProducts);
+router.get('/:id', getProductById);
+
+// Pharmacy routes
+router.get('/my/products', protect, authorize('pharmacy'), getMyProducts);
+router.post('/', protect, authorize('pharmacy'), productValidation, createProduct);
+router.put('/:id', protect, authorize('pharmacy'), updateProduct);
+router.delete('/:id', protect, authorize('pharmacy'), deleteProduct);
+router.put('/:id/stock', protect, authorize('pharmacy'), updateStock);
+
+module.exports = router;
+```
+
+---
+
+## 6. src/routes/orderRoutes.js
+
+```javascript
+const express = require('express');
+const {
+  createOrder,
+  getOrders,
+  getOrderById,
+  updateOrderStatus,
+  assignDriver,
+  getAvailableOrders,
+  cancelOrder
+} = require('../controllers/orderController');
+const { protect } = require('../middleware/auth');
+const { authorize } = require('../middleware/roleCheck');
+const { orderValidation } = require('../middleware/validators/orderValidator');
+
+const router = express.Router();
+
+// Customer routes
+router.post('/', protect, authorize('customer'), orderValidation, createOrder);
+
+// Common routes (all authenticated users)
+router.get('/', protect, getOrders);
+router.get('/:id', protect, getOrderById);
+
+// Status updates
+router.put('/:id/status', protect, updateOrderStatus);
+router.put('/:id/cancel', protect, cancelOrder);
+
+// Driver routes
+router.get('/available/orders', protect, authorize('driver'), getAvailableOrders);
+router.put('/:id/assign-driver', protect, assignDriver);
+
+module.exports = router;
+```
+
+---
+
+## 7. src/middleware/validators/productValidator.js
+
+```javascript
+const { body } = require('express-validator');
+
+exports.productValidation = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Product name is required')
+    .isLength({ min: 3, max: 200 })
+    .withMessage('Product name must be between 3 and 200 characters'),
+  
+  body('description')
+    .trim()
+    .notEmpty()
+    .withMessage('Description is required')
+    .isLength({ min: 10 })
+    .withMessage('Description must be at least 10 characters'),
+  
+  body('category')
+    .notEmpty()
+    .withMessage('Category is required')
+    .isIn(['prescription', 'otc', 'supplement', 'medical-equipment', 'personal-care'])
+    .withMessage('Invalid category'),
+  
+  body('manufacturer')
+    .trim()
+    .notEmpty()
+    .withMessage('Manufacturer is required'),
+  
+  body('pricing.price')
+    .notEmpty()
+    .withMessage('Price is required')
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+  
+  body('stock.quantity')
+    .notEmpty()
+    .withMessage('Stock quantity is required')
+    .isInt({ min: 0 })
+    .withMessage('Stock quantity must be a non-negative integer'),
+  
+  body('stock.unit')
+    .optional()
+    .isIn(['piece', 'bottle', 'box', 'strip'])
+    .withMessage('Invalid stock unit'),
+  
+  body('requiresPrescription')
+    .optional()
+    .isBoolean()
+    .withMessage('requiresPrescription must be a boolean')
+];
+```
+
+---
+
+## 8. src/middleware/validators/orderValidator.js
+
+```javascript
+const { body } = require('express-validator');
+
+exports.orderValidation = [
+  body('items')
+    .isArray({ min: 1 })
+    .withMessage('Order must contain at least one item'),
+  
+  body('items.*.productId')
+    .notEmpty()
+    .withMessage('Product ID is required')
+    .isMongoId()
+    .withMessage('Invalid product ID'),
+  
+  body('items.*.quantity')
+    .notEmpty()
+    .withMessage('Quantity is required')
+    .isInt({ min: 1 })
+    .withMessage('Quantity must be at least 1'),
+  
+  body('deliveryAddress.fullAddress')
+    .trim()
+    .notEmpty()
+    .withMessage('Delivery address is required'),
+  
+  body('deliveryAddress.city')
+    .trim()
+    .notEmpty()
+    .withMessage('City is required'),
+  
+  body('deliveryAddress.state')
+    .trim()
+    .notEmpty()
+    .withMessage('State is required'),
+  
+  body('deliveryAddress.zipCode')
+    .trim()
+    .notEmpty()
+    .withMessage('ZIP code is required'),
+  
+  body('deliveryAddress.phone')
+    .trim()
+    .notEmpty()
+    .withMessage('Contact phone is required'),
+  
+  body('paymentMethod')
+    .notEmpty()
+    .withMessage('Payment method is required')
+    .isIn(['cod', 'card', 'upi', 'wallet'])
+    .withMessage('Invalid payment method')
+];
+```
+
+---
+
+## 9. Update index.js (or server.js)
+
+Add the new routes to your main server file:
+
+```javascript
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const connectDB = require('./src/config/db');
+const errorHandler = require('./src/middleware/errorHandler');
+
+// Load environment variables
+dotenv.config();
+
+// Connect to database
+connectDB();
+
+const app = express();
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
+
+// Routes
+app.use('/api/auth', require('./src/routes/authRoutes'));
+app.use('/api/products', require('./src/routes/productRoutes'));
+app.use('/api/orders', require('./src/routes/orderRoutes'));
+
+// Health check route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Pharmacy Delivery API is running',
+    version: '1.0.0'
+  });
+});
+
+// Error handler middleware (must be last)
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+});
+```
+
+---
+
+## 10. Testing the APIs
+
+### Product APIs
+
+**1. Create Product (Pharmacy)**
+```http
+POST http://localhost:5000/api/products
+Authorization: Bearer {PHARMACY_TOKEN}
+Content-Type: application/json
+
+{
+  "name": "Paracetamol 500mg",
+  "description": "Pain relief and fever reducer",
+  "category": "otc",
+  "manufacturer": "PharmaCorp",
+  "pricing": {
+    "price": 50,
+    "discountPrice": 45,
+    "discountPercentage": 10
+  },
+  "stock": {
+    "quantity": 100,
+    "unit": "strip"
+  },
+  "requiresPrescription": false,
+  "specifications": {
+    "dosageForm": "tablets",
+    "strength": "500mg"
+  },
+  "tags": ["pain-relief", "fever", "common"]
+}
+```
+
+**2. Get All Products**
+```http
+GET http://localhost:5000/api/products?search=paracetamol&category=otc
+```
+
+**3. Get Product by ID**
+```http
+GET http://localhost:5000/api/products/{PRODUCT_ID}
+```
+
+**4. Update Product**
+```http
+PUT http://localhost:5000/api/products/{PRODUCT_ID}
+Authorization: Bearer {PHARMACY_TOKEN}
+Content-Type: application/json
+
+{
+  "pricing": {
+    "price": 55,
+    "discountPrice": 50
+  }
+}
+```
+
+**5. Get My Products (Pharmacy)**
+```http
+GET http://localhost:5000/api/products/my/products
+Authorization: Bearer {PHARMACY_TOKEN}
+```
+
+**6. Update Stock**
+```http
+PUT http://localhost:5000/api/products/{PRODUCT_ID}/stock
+Authorization: Bearer {PHARMACY_TOKEN}
+Content-Type: application/json
+
+{
+  "quantity": 150
+}
+```
+
+**7. Delete Product**
+```http
+DELETE http://localhost:5000/api/products/{PRODUCT_ID}
+Authorization: Bearer {PHARMACY_TOKEN}
+```
+
+---
+
+### Order APIs
+
+**1. Create Order (Customer)**
+```http
+POST http://localhost:5000/api/orders
+Authorization: Bearer {CUSTOMER_TOKEN}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "PRODUCT_ID_1",
+      "quantity": 2
+    },
+    {
+      "productId": "PRODUCT_ID_2",
+      "quantity": 1
+    }
+  ],
+  "deliveryAddress": {
+    "fullAddress": "123 Main Street, Apt 4B",
+    "city": "Colombo",
+    "state": "Western Province",
+    "zipCode": "00100",
+    "latitude": 6.9271,
+    "longitude": 79.8612,
+    "phone": "+94771234567"
+  },
+  "paymentMethod": "cod",
+  "specialInstructions": "Please call before delivery"
+}
+```
+
+**2. Get Orders (Role-based)**
+```http
+GET http://localhost:5000/api/orders?status=pending
+Authorization: Bearer {TOKEN}
+```
+
+**3. Get Order by ID**
+```http
+GET http://localhost:5000/api/orders/{ORDER_ID}
+Authorization: Bearer {TOKEN}
+```
+
+**4. Update Order Status (Pharmacy)**
+```http
+PUT http://localhost:5000/api/orders/{ORDER_ID}/status
+Authorization: Bearer {PHARMACY_TOKEN}
+Content-Type: application/json
+
+{
+  "status": "confirmed",
+  "note": "Order confirmed and being prepared"
+}
+```
+
+**5. Assign Driver to Order**
+```http
+PUT http://localhost:5000/api/orders/{ORDER_ID}/assign-driver
+Authorization: Bearer {PHARMACY_TOKEN}
+Content-Type: application/json
+
+{
+  "driverId": "DRIVER_USER_ID"
+}
+```
+
+**6. Get Available Orders (Driver)**
+```http
+GET http://localhost:5000/api/orders/available/orders
+Authorization: Bearer {DRIVER_TOKEN}
+```
+
+**7. Update Delivery Status (Driver)**
+```http
+PUT http://localhost:5000/api/orders/{ORDER_ID}/status
+Authorization: Bearer {DRIVER_TOKEN}
+Content-Type: application/json
+
+{
+  "status": "picked-up"
+}
+```
+
+**8. Cancel Order**
+```http
+PUT http://localhost:5000/api/orders/{ORDER_ID}/cancel
+Authorization: Bearer {TOKEN}
+Content-Type: application/json
+
+{
+  "reason": "Customer requested cancellation"
+}
+```
+
+---
+
+## 11. Order Status Flow
+
+```
+Customer Places Order
+        ↓
+    [pending]
+        ↓
+Pharmacy Confirms → [confirmed]
+        ↓
+Pharmacy Prepares → [preparing]
+        ↓
+Ready for Pickup → [ready-for-pickup]
+        ↓
+Driver Assigned → [assigned]
+        ↓
+Driver Picks Up → [picked-up]
+        ↓
+On The Way → [out-for-delivery]
+        ↓
+Delivered → [delivered]
+
+(Can be cancelled at any stage before delivery)
+```
+
+---
+
+## 12. Key Features Implemented
+
+✅ **Product Management**
+- CRUD operations for products
+- Search and filter products
+- Category-based filtering
+- Stock management
+- Low stock alerts
+- Pharmacy-specific product listings
+
+✅ **Order Management**
+- Create orders with multiple items
+- Auto-generated order numbers
+- Stock validation before order
+- Automatic stock reduction
+- Order status tracking
+- Status history logging
+- Role-based order filtering
+
+✅ **Authorization**
+- Pharmacies can only manage their own products
+- Customers can only view their orders
+- Drivers can only update assigned orders
+- Proper role-based access control
+
+✅ **Business Logic**
+- All items must be from same pharmacy
+- Stock verification before order
+- Automatic stock restoration on cancellation
+- Price calculation (subtotal, tax, delivery)
+- Estimated delivery time
+
+---
+
+## 13. Next Steps
+
+After testing these APIs, you can add:
+
+1. **Review System** - Rate pharmacies and drivers
+2. **Real-time Tracking** - Socket.io for live updates
+3. **File Uploads** - Prescription and product images
+4. **Admin Dashboard** - Manage all users and orders
+5. **Analytics** - Sales reports, popular products
+6. **Notifications** - Email/SMS alerts
+7. **Payment Gateway** - Stripe/Razorpay integration
+
+Would you like me to implement any of these features next?

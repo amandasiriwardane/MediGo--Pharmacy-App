@@ -1,0 +1,1079 @@
+# Pharmacy Delivery Platform - React + Vite Frontend Setup
+
+## Project Initialization
+
+```bash
+# If you haven't created it yet:
+npm create vite@latest frontend -- --template react
+cd frontend
+
+# Install dependencies
+npm install
+npm install react-router-dom axios redux @reduxjs/toolkit react-redux
+npm install @mui/material @mui/icons-material @emotion/react @emotion/styled
+npm install formik yup react-toastify
+npm install leaflet react-leaflet
+```
+
+---
+
+## Folder Structure
+
+```
+frontend/
+├── public/
+│   └── (your public assets)
+├── src/
+│   ├── components/
+│   │   ├── common/
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   ├── Loader.jsx
+│   │   │   ├── PrivateRoute.jsx
+│   │   │   └── RoleRoute.jsx
+│   │   ├── customer/
+│   │   │   ├── ProductCard.jsx
+│   │   │   ├── ProductList.jsx
+│   │   │   ├── Cart.jsx
+│   │   │   ├── OrderCard.jsx
+│   │   │   └── OrderTracking.jsx
+│   │   ├── pharmacy/
+│   │   │   ├── ProductForm.jsx
+│   │   │   ├── ProductTable.jsx
+│   │   │   ├── OrderList.jsx
+│   │   │   └── PharmacyStats.jsx
+│   │   └── driver/
+│   │       ├── AvailableOrders.jsx
+│   │       ├── ActiveDelivery.jsx
+│   │       └── DriverStats.jsx
+│   ├── pages/
+│   │   ├── auth/
+│   │   │   ├── Login.jsx
+│   │   │   ├── Register.jsx
+│   │   │   └── Profile.jsx
+│   │   ├── customer/
+│   │   │   ├── Home.jsx
+│   │   │   ├── Products.jsx
+│   │   │   ├── ProductDetail.jsx
+│   │   │   ├── Checkout.jsx
+│   │   │   └── MyOrders.jsx
+│   │   ├── pharmacy/
+│   │   │   ├── PharmacyDashboard.jsx
+│   │   │   ├── ManageProducts.jsx
+│   │   │   ├── PharmacyOrders.jsx
+│   │   │   └── PharmacyProfile.jsx
+│   │   └── driver/
+│   │       ├── DriverDashboard.jsx
+│   │       ├── MyDeliveries.jsx
+│   │       └── DriverProfile.jsx
+│   ├── redux/
+│   │   ├── slices/
+│   │   │   ├── authSlice.js
+│   │   │   ├── productSlice.js
+│   │   │   ├── orderSlice.js
+│   │   │   └── cartSlice.js
+│   │   └── store.js
+│   ├── services/
+│   │   ├── api.js
+│   │   ├── authService.js
+│   │   ├── productService.js
+│   │   └── orderService.js
+│   ├── utils/
+│   │   ├── constants.js
+│   │   └── helpers.js
+│   ├── App.jsx
+│   ├── App.css
+│   ├── main.jsx
+│   └── index.css
+├── .env
+├── vite.config.js
+└── package.json
+```
+
+---
+
+## 1. .env (root level)
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_MAP_API_KEY=your_map_api_key
+```
+
+---
+
+## 2. vite.config.js
+
+```javascript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      }
+    }
+  }
+})
+```
+
+---
+
+## 3. src/main.jsx
+
+```javascript
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import { ToastContainer } from 'react-toastify'
+import App from './App.jsx'
+import store from './redux/store.js'
+import './index.css'
+import 'react-toastify/dist/ReactToastify.css'
+import 'leaflet/dist/leaflet.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <Provider store={store}>
+      <BrowserRouter>
+        <App />
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+        />
+      </BrowserRouter>
+    </Provider>
+  </React.StrictMode>,
+)
+```
+
+---
+
+## 4. src/utils/constants.js
+
+```javascript
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+export const USER_ROLES = {
+  CUSTOMER: 'customer',
+  PHARMACY: 'pharmacy',
+  DRIVER: 'driver',
+  ADMIN: 'admin'
+};
+
+export const ORDER_STATUS = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+  PREPARING: 'preparing',
+  READY_FOR_PICKUP: 'ready-for-pickup',
+  ASSIGNED: 'assigned',
+  PICKED_UP: 'picked-up',
+  OUT_FOR_DELIVERY: 'out-for-delivery',
+  DELIVERED: 'delivered',
+  CANCELLED: 'cancelled'
+};
+
+export const ORDER_STATUS_LABELS = {
+  'pending': 'Pending',
+  'confirmed': 'Confirmed',
+  'preparing': 'Preparing',
+  'ready-for-pickup': 'Ready for Pickup',
+  'assigned': 'Driver Assigned',
+  'picked-up': 'Picked Up',
+  'out-for-delivery': 'Out for Delivery',
+  'delivered': 'Delivered',
+  'cancelled': 'Cancelled'
+};
+
+export const PRODUCT_CATEGORIES = [
+  { value: 'prescription', label: 'Prescription' },
+  { value: 'otc', label: 'Over the Counter' },
+  { value: 'supplement', label: 'Supplement' },
+  { value: 'medical-equipment', label: 'Medical Equipment' },
+  { value: 'personal-care', label: 'Personal Care' }
+];
+
+export const PAYMENT_METHODS = [
+  { value: 'cod', label: 'Cash on Delivery' },
+  { value: 'card', label: 'Credit/Debit Card' },
+  { value: 'upi', label: 'UPI' },
+  { value: 'wallet', label: 'Digital Wallet' }
+];
+```
+
+---
+
+## 5. src/utils/helpers.js
+
+```javascript
+export const formatPrice = (price) => {
+  return new Intl.NumberFormat('en-LK', {
+    style: 'currency',
+    currency: 'LKR'
+  }).format(price);
+};
+
+export const formatDate = (date) => {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+export const getOrderStatusColor = (status) => {
+  const colors = {
+    pending: 'warning',
+    confirmed: 'info',
+    preparing: 'info',
+    'ready-for-pickup': 'primary',
+    assigned: 'primary',
+    'picked-up': 'secondary',
+    'out-for-delivery': 'secondary',
+    delivered: 'success',
+    cancelled: 'error'
+  };
+  return colors[status] || 'default';
+};
+
+export const calculateCartTotal = (items) => {
+  return items.reduce((total, item) => {
+    const price = item.pricing?.discountPrice || item.pricing?.price || 0;
+    return total + (price * item.quantity);
+  }, 0);
+};
+
+export const validateEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+export const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c;
+  return distance.toFixed(2);
+};
+```
+
+---
+
+## 6. src/services/api.js
+
+```javascript
+import axios from 'axios';
+import { API_URL } from '../utils/constants';
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Request interceptor to add token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+---
+
+## 7. src/services/authService.js
+
+```javascript
+import api from './api';
+
+const authService = {
+  register: async (userData) => {
+    const response = await api.post('/auth/register', userData);
+    if (response.data.data.token) {
+      localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.data));
+    }
+    return response.data;
+  },
+
+  login: async (credentials) => {
+    const response = await api.post('/auth/login', credentials);
+    if (response.data.data.token) {
+      localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.data));
+    }
+    return response.data;
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
+
+  getCurrentUser: async () => {
+    const response = await api.get('/auth/me');
+    return response.data;
+  },
+
+  updateProfile: async (userData) => {
+    const response = await api.put('/auth/update-profile', userData);
+    return response.data;
+  },
+
+  updatePassword: async (passwords) => {
+    const response = await api.put('/auth/update-password', passwords);
+    return response.data;
+  }
+};
+
+export default authService;
+```
+
+---
+
+## 8. src/services/productService.js
+
+```javascript
+import api from './api';
+
+const productService = {
+  getProducts: async (params) => {
+    const response = await api.get('/products', { params });
+    return response.data;
+  },
+
+  getProductById: async (id) => {
+    const response = await api.get(`/products/${id}`);
+    return response.data;
+  },
+
+  createProduct: async (productData) => {
+    const response = await api.post('/products', productData);
+    return response.data;
+  },
+
+  updateProduct: async (id, productData) => {
+    const response = await api.put(`/products/${id}`, productData);
+    return response.data;
+  },
+
+  deleteProduct: async (id) => {
+    const response = await api.delete(`/products/${id}`);
+    return response.data;
+  },
+
+  getMyProducts: async (params) => {
+    const response = await api.get('/products/my/products', { params });
+    return response.data;
+  },
+
+  updateStock: async (id, quantity) => {
+    const response = await api.put(`/products/${id}/stock`, { quantity });
+    return response.data;
+  }
+};
+
+export default productService;
+```
+
+---
+
+## 9. src/services/orderService.js
+
+```javascript
+import api from './api';
+
+const orderService = {
+  createOrder: async (orderData) => {
+    const response = await api.post('/orders', orderData);
+    return response.data;
+  },
+
+  getOrders: async (params) => {
+    const response = await api.get('/orders', { params });
+    return response.data;
+  },
+
+  getOrderById: async (id) => {
+    const response = await api.get(`/orders/${id}`);
+    return response.data;
+  },
+
+  updateOrderStatus: async (id, statusData) => {
+    const response = await api.put(`/orders/${id}/status`, statusData);
+    return response.data;
+  },
+
+  cancelOrder: async (id, reason) => {
+    const response = await api.put(`/orders/${id}/cancel`, { reason });
+    return response.data;
+  },
+
+  assignDriver: async (id, driverId) => {
+    const response = await api.put(`/orders/${id}/assign-driver`, { driverId });
+    return response.data;
+  },
+
+  getAvailableOrders: async () => {
+    const response = await api.get('/orders/available/orders');
+    return response.data;
+  }
+};
+
+export default orderService;
+```
+
+---
+
+## 10. src/redux/store.js
+
+```javascript
+import { configureStore } from '@reduxjs/toolkit';
+import authReducer from './slices/authSlice';
+import productReducer from './slices/productSlice';
+import orderReducer from './slices/orderSlice';
+import cartReducer from './slices/cartSlice';
+
+export const store = configureStore({
+  reducer: {
+    auth: authReducer,
+    products: productReducer,
+    orders: orderReducer,
+    cart: cartReducer
+  }
+});
+
+export default store;
+```
+
+---
+
+## 11. src/redux/slices/authSlice.js
+
+```javascript
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import authService from '../../services/authService';
+
+// Get user from localStorage
+const user = JSON.parse(localStorage.getItem('user'));
+
+const initialState = {
+  user: user || null,
+  isLoading: false,
+  isSuccess: false,
+  isError: false,
+  message: ''
+};
+
+// Register user
+export const register = createAsyncThunk(
+  'auth/register',
+  async (userData, thunkAPI) => {
+    try {
+      return await authService.register(userData);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Login user
+export const login = createAsyncThunk(
+  'auth/login',
+  async (credentials, thunkAPI) => {
+    try {
+      return await authService.login(credentials);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Logout user
+export const logout = createAsyncThunk('auth/logout', async () => {
+  authService.logout();
+});
+
+// Get current user
+export const getCurrentUser = createAsyncThunk(
+  'auth/me',
+  async (_, thunkAPI) => {
+    try {
+      return await authService.getCurrentUser();
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  reducers: {
+    reset: (state) => {
+      state.isLoading = false;
+      state.isSuccess = false;
+      state.isError = false;
+      state.message = '';
+    }
+  },
+  extraReducers: (builder) => {
+    builder
+      // Register
+      .addCase(register.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(register.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.user = action.payload.data;
+      })
+      .addCase(register.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      // Login
+      .addCase(login.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(login.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.user = action.payload.data;
+      })
+      .addCase(login.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      // Logout
+      .addCase(logout.fulfilled, (state) => {
+        state.user = null;
+      })
+      // Get Current User
+      .addCase(getCurrentUser.fulfilled, (state, action) => {
+        state.user = action.payload.data;
+      });
+  }
+});
+
+export const { reset } = authSlice.actions;
+export default authSlice.reducer;
+```
+
+---
+
+## 12. src/redux/slices/productSlice.js
+
+```javascript
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import productService from '../../services/productService';
+
+const initialState = {
+  products: [],
+  product: null,
+  isLoading: false,
+  isSuccess: false,
+  isError: false,
+  message: '',
+  pagination: null
+};
+
+// Get all products
+export const getProducts = createAsyncThunk(
+  'products/getAll',
+  async (params, thunkAPI) => {
+    try {
+      return await productService.getProducts(params);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Get product by ID
+export const getProductById = createAsyncThunk(
+  'products/getById',
+  async (id, thunkAPI) => {
+    try {
+      return await productService.getProductById(id);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Create product
+export const createProduct = createAsyncThunk(
+  'products/create',
+  async (productData, thunkAPI) => {
+    try {
+      return await productService.createProduct(productData);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Update product
+export const updateProduct = createAsyncThunk(
+  'products/update',
+  async ({ id, productData }, thunkAPI) => {
+    try {
+      return await productService.updateProduct(id, productData);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Delete product
+export const deleteProduct = createAsyncThunk(
+  'products/delete',
+  async (id, thunkAPI) => {
+    try {
+      return await productService.deleteProduct(id);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Get my products (pharmacy)
+export const getMyProducts = createAsyncThunk(
+  'products/getMyProducts',
+  async (params, thunkAPI) => {
+    try {
+      return await productService.getMyProducts(params);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const productSlice = createSlice({
+  name: 'products',
+  initialState,
+  reducers: {
+    reset: (state) => {
+      state.isLoading = false;
+      state.isSuccess = false;
+      state.isError = false;
+      state.message = '';
+    }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(getProducts.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getProducts.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.products = action.payload.data;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(getProducts.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(getProductById.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getProductById.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.product = action.payload.data;
+      })
+      .addCase(getProductById.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(createProduct.fulfilled, (state, action) => {
+        state.isSuccess = true;
+        state.products.push(action.payload.data);
+      })
+      .addCase(updateProduct.fulfilled, (state, action) => {
+        state.isSuccess = true;
+        const index = state.products.findIndex(p => p._id === action.payload.data._id);
+        if (index !== -1) {
+          state.products[index] = action.payload.data;
+        }
+      })
+      .addCase(deleteProduct.fulfilled, (state, action) => {
+        state.isSuccess = true;
+      })
+      .addCase(getMyProducts.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getMyProducts.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.products = action.payload.data;
+        state.pagination = action.payload.pagination;
+      });
+  }
+});
+
+export const { reset } = productSlice.actions;
+export default productSlice.reducer;
+```
+
+---
+
+## 13. src/redux/slices/cartSlice.js
+
+```javascript
+import { createSlice } from '@reduxjs/toolkit';
+
+const cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
+
+const initialState = {
+  items: cartItems,
+  pharmacyId: cartItems.length > 0 ? cartItems[0].pharmacyId : null
+};
+
+export const cartSlice = createSlice({
+  name: 'cart',
+  initialState,
+  reducers: {
+    addToCart: (state, action) => {
+      const { product, quantity } = action.payload;
+      
+      // Check if adding from different pharmacy
+      if (state.pharmacyId && state.pharmacyId !== product.pharmacyId._id) {
+        // Clear cart if from different pharmacy
+        state.items = [];
+      }
+      
+      state.pharmacyId = product.pharmacyId._id;
+      
+      const existingItem = state.items.find(item => item._id === product._id);
+      
+      if (existingItem) {
+        existingItem.quantity += quantity;
+      } else {
+        state.items.push({
+          ...product,
+          quantity,
+          pharmacyId: product.pharmacyId._id
+        });
+      }
+      
+      localStorage.setItem('cartItems', JSON.stringify(state.items));
+    },
+    
+    updateQuantity: (state, action) => {
+      const { productId, quantity } = action.payload;
+      const item = state.items.find(item => item._id === productId);
+      
+      if (item) {
+        item.quantity = quantity;
+        localStorage.setItem('cartItems', JSON.stringify(state.items));
+      }
+    },
+    
+    removeFromCart: (state, action) => {
+      state.items = state.items.filter(item => item._id !== action.payload);
+      
+      if (state.items.length === 0) {
+        state.pharmacyId = null;
+      }
+      
+      localStorage.setItem('cartItems', JSON.stringify(state.items));
+    },
+    
+    clearCart: (state) => {
+      state.items = [];
+      state.pharmacyId = null;
+      localStorage.removeItem('cartItems');
+    }
+  }
+});
+
+export const { addToCart, updateQuantity, removeFromCart, clearCart } = cartSlice.actions;
+export default cartSlice.reducer;
+```
+
+---
+
+## 14. src/redux/slices/orderSlice.js
+
+```javascript
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import orderService from '../../services/orderService';
+
+const initialState = {
+  orders: [],
+  order: null,
+  isLoading: false,
+  isSuccess: false,
+  isError: false,
+  message: '',
+  pagination: null
+};
+
+// Create order
+export const createOrder = createAsyncThunk(
+  'orders/create',
+  async (orderData, thunkAPI) => {
+    try {
+      return await orderService.createOrder(orderData);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Get orders
+export const getOrders = createAsyncThunk(
+  'orders/getAll',
+  async (params, thunkAPI) => {
+    try {
+      return await orderService.getOrders(params);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Get order by ID
+export const getOrderById = createAsyncThunk(
+  'orders/getById',
+  async (id, thunkAPI) => {
+    try {
+      return await orderService.getOrderById(id);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Update order status
+export const updateOrderStatus = createAsyncThunk(
+  'orders/updateStatus',
+  async ({ id, statusData }, thunkAPI) => {
+    try {
+      return await orderService.updateOrderStatus(id, statusData);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Cancel order
+export const cancelOrder = createAsyncThunk(
+  'orders/cancel',
+  async ({ id, reason }, thunkAPI) => {
+    try {
+      return await orderService.cancelOrder(id, reason);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const orderSlice = createSlice({
+  name: 'orders',
+  initialState,
+  reducers: {
+    reset: (state) => {
+      state.isLoading = false;
+      state.isSuccess = false;
+      state.isError = false;
+      state.message = '';
+    }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(createOrder.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(createOrder.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.order = action.payload.data;
+      })
+      .addCase(createOrder.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(getOrders.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getOrders.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.orders = action.payload.data;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(getOrders.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(getOrderById.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getOrderById.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.order = action.payload.data;
+      })
+      .addCase(updateOrderStatus.fulfilled, (state, action) => {
+        state.isSuccess = true;
+        if (state.order && state.order._id === action.payload.data._id) {
+          state.order = action.payload.data;
+        }
+      })
+      .addCase(cancelOrder.fulfilled, (state, action) => {
+        state.isSuccess = true;
+        if (state.order && state.order._id === action.payload.data._id) {
+          state.order = action.payload.data;
+        }
+      });
+  }
+});
+
+export const { reset } = orderSlice.actions;
+export default orderSlice.reducer;
+```
+
+---
+
+## Installation Steps
+
+1. **Install all dependencies:**
+```bash
+npm install
+npm install react-router-dom axios redux @reduxjs/toolkit react-redux @mui/material @mui/icons-material @emotion/react @emotion/styled formik yup react-toastify leaflet react-leaflet
+```
+
+2. **Create `.env` file in root:**
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+3. **Update `src/main.jsx`** with the code from section 3 above
+
+4. **Create all the folders and files** as shown in the structure
+
+5. **Run the development server:**
+```bash
+npm run dev
+```
+
+---
+
+## Key Differences from CRA (Summary)
+
+| Feature | Create React App | Vite |
+|---------|------------------|------|
+| Entry point | `src/index.js` | `src/main.jsx` |
+| Env prefix | `REACT_APP_` | `VITE_` |
+| Env access | `process.env.REACT_APP_*` | `import.meta.env.VITE_*` |
+| Config file | N/A (hidden) | `vite.config.js` |
+| Speed | Slower | ⚡ Much faster |
+
+---
+
+## Next: Build UI Components
+
+Now that the foundation is ready, shall I create:
+
+### Phase 1: Common Components & Auth
+1. **Loader Component** - Loading spinner
+2. **PrivateRoute Component** - Protected routes
+3. **RoleRoute Component** - Role-based routing
+4. **Navbar Component** - Navigation bar
+5. **Footer Component** - Footer
+6. **Login Page** - Login form
+7. **Register Page** - Registration form with role selection
+
+### Phase 2: Customer Components
+8. **Home Page** - Landing page with featured products
+9. **ProductCard** - Product display card
+10. **ProductList** - Grid of products
+11. **Products Page** - Browse all products with search/filter
+12. **ProductDetail Page** - Single product view
+13. **Cart Component** - Shopping cart
+14. **Checkout Page** - Order placement
+15. **MyOrders Page** - Order history
+16. **OrderTracking** - Track order status
+
+### Phase 3: Pharmacy Components
+17. **PharmacyDashboard** - Overview stats
+18. **ManageProducts** - CRUD products
+19. **ProductForm** - Add/Edit product
+20. **PharmacyOrders** - Incoming orders
+21. **PharmacyStats** - Analytics
+
+### Phase 4: Driver Components
+22. **DriverDashboard** - Driver overview
+23. **AvailableOrders** - Orders to accept
+24. **ActiveDelivery** - Current delivery
+25. **MyDeliveries** - Delivery history
+
+### Phase 5: App.js & Routing
+26. **App.jsx** - Main app with all routes
+27. **Complete routing setup**
+
+---
+
+Let's start with **Phase 1: Common Components & Auth**. Ready to continue? 🚀
