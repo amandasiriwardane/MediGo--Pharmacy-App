@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import { updateQuantity, removeFromCart, clearCart } from '../../redux/slices/cartSlice';
 import { toast } from 'react-toastify';
-import { formatPrice, calculateCartTotal } from '../../utils/helpers';
+import { formatPrice, calculateCartTotal, getImageUrl } from '../../utils/helpers';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -116,7 +116,7 @@ const Cart = () => {
                     <Grid size={{ xs: 12, sm: 3 }}>
                       <CardMedia
                         component="img"
-                        image={item.images?.[0] || 'https://via.placeholder.com/150?text=No+Image'}
+                        image={getImageUrl(item.image?.[0])}
                         alt={item.name}
                         sx={{
                           height: 120,

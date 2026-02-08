@@ -16,15 +16,11 @@ import Products from './pages/customer/Products';
 import ProductDetail from './pages/customer/ProductDetail';
 import Checkout from './pages/customer/Checkout';
 import MyOrders from './pages/customer/MyOrders';
-
+import PharmacyDashboard from './pages/pharmacy/PharmacyDashboard';
+import ManageProducts from './pages/pharmacy/ManageProducts';
+import PharmacyOrders from './pages/pharmacy/PharmacyOrders';
 import Cart from './pages/customer/Cart';
 
-
-const PharmacyDashboard = () => (
-  <Box sx={{ minHeight: '70vh', p: 4 }}>
-    <h1>Pharmacy Dashboard - Coming in Phase 3</h1>
-  </Box>
-);
 
 const DriverDashboard = () => (
   <Box sx={{ minHeight: '70vh', p: 4 }}>
@@ -88,6 +84,27 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/pharmacy/products"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['pharmacy']}>
+                  <ManageProducts />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/pharmacy/orders"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['pharmacy']}>
+                  <PharmacyOrders />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+
 
           {/* Driver Routes */}
           <Route

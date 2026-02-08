@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
   Dialog,
-  DialogTitle, 
+  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
@@ -11,11 +11,15 @@ import {
   Grid,
   MenuItem,
   FormControlLabel,
-  Switch
+  Switch,
+  Box
 } from '@mui/material';
 import { PRODUCT_CATEGORIES } from '../../utils/constants';
 
 const ProductForm = ({ open, onClose, onSubmit, initialValues, isEdit }) => {
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(initialValues?.images?.[0] || null);
+ 
   const validationSchema = Yup.object({
     name: Yup.string().required('Product name is required'),
     description: Yup.string().required('Description is required'),
@@ -61,9 +65,17 @@ const ProductForm = ({ open, onClose, onSubmit, initialValues, isEdit }) => {
           dosageForm: values.dosageForm
         }
       };
-      onSubmit(productData);
+      onSubmit(productData, imageFile);
     }
   });
+
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -206,6 +218,31 @@ const ProductForm = ({ open, onClose, onSubmit, initialValues, isEdit }) => {
                 onChange={formik.handleChange}
               />
             </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Button
+                variant="outlined"
+                component="label"
+                fullWidth
+              >
+                {imagePreview ? 'Change Product Image' : 'Upload Product Image'}
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+              </Button>
+              {imagePreview && (
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <img 
+                    src={imagePreview.startsWith('blob:') ? imagePreview : `http://localhost:5000${imagePreview}`}
+                    alt="Preview" 
+                    style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
+                  />
+                </Box>
+              )}
+            </Grid>
+            
 
             <Grid size={{ xs: 12 }}>
               <FormControlLabel

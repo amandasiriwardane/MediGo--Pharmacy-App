@@ -17,7 +17,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Routes
@@ -43,3 +45,6 @@ app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
+const path = require('path');
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

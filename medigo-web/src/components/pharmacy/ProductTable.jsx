@@ -14,7 +14,7 @@ import {
   Typography
 } from '@mui/material';
 import { Edit, Delete, Visibility } from '@mui/icons-material';
-import { formatPrice } from '../../utils/helpers';
+import { formatPrice, getImageUrl } from '../../utils/helpers';
 
 const ProductTable = ({ products, onEdit, onDelete, onView }) => {
   if (products.length === 0) {
@@ -49,7 +49,7 @@ const ProductTable = ({ products, onEdit, onDelete, onView }) => {
               <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar
-                    src={product.images?.[0] || ''}
+                    src={getImageUrl(product.image?.[0])}
                     alt={product.name}
                     variant="rounded"
                   />

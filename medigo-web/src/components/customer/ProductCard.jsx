@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatPrice, getImageUrl } from '../../utils/helpers';
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -11,13 +12,16 @@ import {
   Box
 } from '@mui/material';
 import { ShoppingCart, LocalPharmacy } from '@mui/icons-material';
-import { formatPrice } from '../../utils/helpers';
 
 const ProductCard = ({ product, onAddToCart }) => {
   const displayPrice = product.pricing?.discountPrice || product.pricing?.price || 0;
   const originalPrice = product.pricing?.price || 0;
   const hasDiscount = product.pricing?.discountPrice && product.pricing?.discountPrice < originalPrice;
 
+  console.log('Product:', product.name);
+  console.log('Image path:', product.images?.[0]);
+  console.log('Generated URL:', getImageUrl(product.images?.[0]));
+  
   return (
     <Card 
       sx={{ 
@@ -34,7 +38,7 @@ const ProductCard = ({ product, onAddToCart }) => {
       <CardMedia
         component="img"
         height="200"
-        image={product.images?.[0] || 'https://via.placeholder.com/200?text=No+Image'}
+        image={getImageUrl(product.image?.[0])}
         alt={product.name}
         sx={{ objectFit: 'cover' }}
       />

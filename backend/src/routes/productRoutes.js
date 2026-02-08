@@ -1,4 +1,5 @@
 const express = require('express');
+const upload = require('../middleware/upload');
 const {
   getProducts,
   getProductById,
@@ -20,8 +21,8 @@ router.get('/:id', getProductById);
 
 // Pharmacy routes
 router.get('/my/products', protect, authorize('pharmacy'), getMyProducts);
-router.post('/', protect, authorize('pharmacy'), productValidation, createProduct);
-router.put('/:id', protect, authorize('pharmacy'), updateProduct);
+router.post('/', protect, authorize('pharmacy'), upload.single('image'), productValidation, createProduct);
+router.put('/:id', protect, authorize('pharmacy'), upload.single('image'), productValidation, updateProduct);
 router.delete('/:id', protect, authorize('pharmacy'), deleteProduct);
 router.put('/:id/stock', protect, authorize('pharmacy'), updateStock);
 

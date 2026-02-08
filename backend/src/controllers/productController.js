@@ -89,13 +89,34 @@ exports.getProductById = async (req, res, next) => {
 // @access  Private (Pharmacy)
 exports.createProduct = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    console.log('Received data:', req.body);
+    console.log('Received file:', req.file);
+
+    // Parse JSON strings from FormData
+    if (req.body.pricing && typeof req.body.pricing === 'string') {
+      req.body.pricing = JSON.parse(req.body.pricing);
+    }
+    if (req.body.stock && typeof req.body.stock === 'string') {
+      req.body.stock = JSON.parse(req.body.stock);
+    }
+    if (req.body.specifications && typeof req.body.specifications === 'string') {
+      req.body.specifications = JSON.parse(req.body.specifications);
+    }
+    
+    // Convert boolean string to actual boolean
+    if (req.body.requiresPrescription === 'true' || req.body.requiresPrescription === 'false') {
+      req.body.requiresPrescription = req.body.requiresPrescription === 'true';
     }
 
     // Add pharmacy ID from logged in user
     req.body.pharmacyId = req.user.id;
+
+    // Handle uploaded image
+    if (req.file) {
+      req.body.images = [`/uploads/products/${req.file.filename}`];
+    }
+
+    console.log('Processed data:', req.body); // Debug log
 
     const product = await Product.create(req.body);
 
@@ -104,7 +125,11 @@ exports.createProduct = async (req, res, next) => {
       data: product
     });
   } catch (error) {
-    next(error);
+    console.error('Create product error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -124,6 +149,27 @@ exports.updateProduct = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized to update this product' });
     }
 
+    // Parse JSON strings from FormData
+    if (req.body.pricing && typeof req.body.pricing === 'string') {
+      req.body.pricing = JSON.parse(req.body.pricing);
+    }
+    if (req.body.stock && typeof req.body.stock === 'string') {
+      req.body.stock = JSON.parse(req.body.stock);
+    }
+    if (req.body.specifications && typeof req.body.specifications === 'string') {
+      req.body.specifications = JSON.parse(req.body.specifications);
+    }
+    
+    // Convert boolean string to actual boolean
+    if (req.body.requiresPrescription === 'true' || req.body.requiresPrescription === 'false') {
+      req.body.requiresPrescription = req.body.requiresPrescription === 'true';
+    }
+
+    // Handle uploaded image
+    if (req.file) {
+      req.body.images = [`/uploads/products/${req.file.filename}`];
+    }
+
     product = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -138,7 +184,11 @@ exports.updateProduct = async (req, res, next) => {
       data: product
     });
   } catch (error) {
-    next(error);
+    console.error('Update product error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 

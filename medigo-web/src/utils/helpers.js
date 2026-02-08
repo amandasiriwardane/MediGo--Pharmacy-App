@@ -53,3 +53,12 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const distance = R * c;
   return distance.toFixed(2);
 };
+
+export const getImageUrl = (imagePath) => {
+  if (!imagePath) {
+    return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16"%3ENo Image%3C/text%3E%3C/svg%3E';
+  }
+  if (imagePath.startsWith('http')) return imagePath;
+  // Just return the path as-is, Vite will proxy it
+  return imagePath;
+};

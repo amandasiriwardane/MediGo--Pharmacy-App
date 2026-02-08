@@ -108,7 +108,7 @@ const Products = () => {
             <TextField
               fullWidth
               select
-              label="Category"
+              labelFor="Category"
               value={filters.category}
               onChange={handleCategoryChange}
             >

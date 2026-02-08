@@ -11,13 +11,51 @@ const productService = {
     return response.data;
   },
 
-  createProduct: async (productData) => {
-    const response = await api.post('/products', productData);
+  createProduct: async (productData, imageFile) => {
+    const formData = new FormData();
+    
+    // Append all fields individually
+    Object.keys(productData).forEach(key => {
+      if (typeof productData[key] === 'object' && productData[key] !== null) {
+        formData.append(key, JSON.stringify(productData[key]));
+      } else {
+        formData.append(key, productData[key]);
+      }
+    });
+    
+    // Append image if exists
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+    
+    const response = await api.post('/products', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
     return response.data;
   },
 
-  updateProduct: async (id, productData) => {
-    const response = await api.put(`/products/${id}`, productData);
+  updateProduct: async (id, productData, imageFile) => {
+    const formData = new FormData();
+    
+    Object.keys(productData).forEach(key => {
+      if (typeof productData[key] === 'object' && productData[key] !== null) {
+        formData.append(key, JSON.stringify(productData[key]));
+      } else {
+        formData.append(key, productData[key]);
+      }
+    });
+    
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+    
+    const response = await api.put(`/products/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
     return response.data;
   },
 

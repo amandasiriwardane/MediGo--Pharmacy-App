@@ -25,7 +25,7 @@ import { getProductById } from '../../redux/slices/productSlice';
 import { addToCart } from '../../redux/slices/cartSlice';
 import { toast } from 'react-toastify';
 import Loader from '../../components/common/Loader';
-import { formatPrice } from '../../utils/helpers';
+import { formatPrice, getImageUrl } from '../../utils/helpers';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -109,7 +109,7 @@ const ProductDetail = () => {
           <Paper elevation={2} sx={{ p: 2 }}>
             <Box
               component="img"
-              src={product.images?.[0] || 'https://via.placeholder.com/400?text=No+Image'}
+              src={getImageUrl(product.image?.[0])}
               alt={product.name}
               sx={{
                 width: '100%',

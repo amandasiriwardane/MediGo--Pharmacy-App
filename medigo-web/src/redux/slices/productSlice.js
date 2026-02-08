@@ -37,12 +37,12 @@ export const getProductById = createAsyncThunk(
   }
 );
 
-// Create product
+// Update createProduct thunk
 export const createProduct = createAsyncThunk(
   'products/create',
-  async (productData, thunkAPI) => {
+  async ({ productData, imageFile }, thunkAPI) => {
     try {
-      return await productService.createProduct(productData);
+      return await productService.createProduct(productData, imageFile);
     } catch (error) {
       const message = error.response?.data?.message || error.message;
       return thunkAPI.rejectWithValue(message);
@@ -50,12 +50,12 @@ export const createProduct = createAsyncThunk(
   }
 );
 
-// Update product
+// Update updateProduct thunk
 export const updateProduct = createAsyncThunk(
   'products/update',
-  async ({ id, productData }, thunkAPI) => {
+  async ({ id, productData, imageFile }, thunkAPI) => {
     try {
-      return await productService.updateProduct(id, productData);
+      return await productService.updateProduct(id, productData, imageFile);
     } catch (error) {
       const message = error.response?.data?.message || error.message;
       return thunkAPI.rejectWithValue(message);
