@@ -109,7 +109,7 @@ const ProductDetail = () => {
           <Paper elevation={2} sx={{ p: 2 }}>
             <Box
               component="img"
-              src={getImageUrl(product.image?.[0])}
+              src={getImageUrl(product.images?.[0])}
               alt={product.name}
               sx={{
                 width: '100%',

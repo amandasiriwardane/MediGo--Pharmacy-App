@@ -38,7 +38,7 @@ const ProductCard = ({ product, onAddToCart }) => {
       <CardMedia
         component="img"
         height="200"
-        image={getImageUrl(product.image?.[0])}
+        image={getImageUrl(product.images?.[0])}
         alt={product.name}
         sx={{ objectFit: 'cover' }}
       />

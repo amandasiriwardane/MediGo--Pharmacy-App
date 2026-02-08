@@ -15,6 +15,8 @@ import {
   Box
 } from '@mui/material';
 import { PRODUCT_CATEGORIES } from '../../utils/constants';
+import { getImageUrl } from '../../utils/helpers';
+
 
 const ProductForm = ({ open, onClose, onSubmit, initialValues, isEdit }) => {
   const [imageFile, setImageFile] = useState(null);
@@ -235,7 +237,7 @@ const ProductForm = ({ open, onClose, onSubmit, initialValues, isEdit }) => {
               {imagePreview && (
                 <Box sx={{ mt: 2, textAlign: 'center' }}>
                   <img 
-                    src={imagePreview.startsWith('blob:') ? imagePreview : `http://localhost:5000${imagePreview}`}
+                    src={imagePreview.startsWith('blob:') ? imagePreview : getImageUrl(imagePreview)} 
                     alt="Preview" 
                     style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
                   />

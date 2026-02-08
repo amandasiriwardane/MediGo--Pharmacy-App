@@ -49,7 +49,7 @@ const ProductTable = ({ products, onEdit, onDelete, onView }) => {
               <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar
-                    src={getImageUrl(product.image?.[0])}
+                    src={getImageUrl(product.images?.[0])}
                     alt={product.name}
                     variant="rounded"
                   />

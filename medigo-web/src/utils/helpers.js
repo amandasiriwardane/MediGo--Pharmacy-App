@@ -54,10 +54,15 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return distance.toFixed(2);
 };
 
-export const getImageUrl = (imagePath) => {
-  if (!imagePath) return 'https://via.placeholder.com/200?text=No+Image';
-  // If it's already a full URL (Cloudinary), return it as is
-  if (imagePath.startsWith('http')) return imagePath;
-  // Fallback for any remaining local uploads
-  return `${import.meta.env.VITE_BACKEND_URL}${imagePath}`;
+export const getImageUrl = (imageSource) => {
+  if (!imageSource) return 'https://placehold.co/200x200?text=No+Image';
+  
+  // Extract the first path if it's an array, otherwise use the string
+  const path = Array.isArray(imageSource) ? imageSource[0] : imageSource;
+  
+  if (!path || path === 'undefined') return 'https://placehold.co/200x200?text=No+Image';
+  if (path.startsWith('http')) return path;
+  
+  const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
 };
