@@ -113,7 +113,8 @@ exports.createProduct = async (req, res, next) => {
 
     // Handle uploaded image
     if (req.file) {
-      req.body.images = [`/uploads/products/${req.file.filename}`];
+      // Use path or secure_url provided by Cloudinary
+      req.body.images = [req.file.path]; 
     }
 
     console.log('Processed data:', req.body); // Debug log
@@ -167,7 +168,8 @@ exports.updateProduct = async (req, res, next) => {
 
     // Handle uploaded image
     if (req.file) {
-      req.body.images = [`/uploads/products/${req.file.filename}`];
+      // Use path or secure_url provided by Cloudinary
+      req.body.images = [req.file.path]; 
     }
 
     product = await Product.findByIdAndUpdate(
